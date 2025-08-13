@@ -37,9 +37,9 @@ export const TopBody: FC<{
           window.open(
             IS_OVERSEA
               ? // cp-disable-next-line
-                'https://www.coze.com/open/docs/developer_guides/coze_api_overview'
+                'https://www.shengjian.net/open/docs/developer_guides/coze_api_overview'
               : // cp-disable-next-line
-                'https://www.coze.cn/open/docs/developer_guides/coze_api_overview',
+                'https://www.shengjian.net/open/docs/developer_guides/coze_api_overview',
           );
         }}
       />

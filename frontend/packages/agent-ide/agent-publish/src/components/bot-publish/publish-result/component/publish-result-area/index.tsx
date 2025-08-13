@@ -95,7 +95,7 @@ export const PublishResultArea = (props: PublishStatusProp) => {
         {record.bind_type === BindType.ApiBind ? (
           <UIButton
             theme="borderless"
-            onClick={() => window.open('/docs/developer_guides')}
+             onClick={() => window.open('https://www.shengjian.net/docs/developer_guides')}
           >
             {I18n.t('coze_api_instru')}
           </UIButton>

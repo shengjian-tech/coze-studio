@@ -112,7 +112,7 @@ export const LoginPage: FC = () => {
                 target="_blank"
                 className="no-underline coz-fg-hglt"
               >
-                {I18n.t('open_source_terms_linkname')}
+                
               </a>
             </div>
           </div>

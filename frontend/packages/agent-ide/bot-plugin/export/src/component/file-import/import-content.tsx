@@ -183,8 +183,8 @@ export const FileUpload = ({ onUpload, disabled }: FileUploadProps) => {
           <a
             href={
               IS_OVERSEA
-                ? '/open/docs/guides/plugin_import'
-                : '/open/docs/guides/import'
+                ? 'https://www.shengjian.net/open/docs/guides/plugin_import'
+                : 'https://www.shengjian.net/open/docs/guides/import'
             }
             target="_blank"
             onClick={e => e.stopPropagation()}

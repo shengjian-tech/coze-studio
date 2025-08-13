@@ -81,7 +81,7 @@ export const GlobalLayoutComposed: FC<PropsWithChildren> = ({ children }) => {
             tooltip: I18n.t('menu_documents'),
             onClick: () => {
               // cp-disable-next-line
-              window.open('https://www.coze.cn/open/docs/guides');
+              window.open('https://www.shengjian.net/open/docs/guides');
             },
             dataTestId: 'layout_document-button',
           },
