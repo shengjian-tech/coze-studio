@@ -61,13 +61,13 @@ export const WidgetDefaultRenderer = () => {
     }));
 
   const handleWorkflowDoc = useCallback(() => {
-    window.open('/docs/guides/build_project_in_projectide');
+    window.open('https://shengjian.net/docs/guides/build_project_in_projectide');
   }, []);
   const handleUIBuilderDoc = useCallback(() => {
-    window.open('/docs/guides/build_ui_interface');
+    window.open('https://shengjian.net/docs/guides/build_ui_interface');
   }, []);
   const handleDatabaseDoc = useCallback(() => {
-    window.open('/docs/guides/add_resources_to_project');
+    window.open('https://shengjian.net/docs/guides/add_resources_to_project');
   }, []);
 
   return (

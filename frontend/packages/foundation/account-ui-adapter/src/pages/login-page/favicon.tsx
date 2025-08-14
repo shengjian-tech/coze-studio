@@ -23,9 +23,5 @@ export const Favicon = () => (
       src={FaviconBase}
       className=" h-[100px] rounded-[21px] border border-solid coz-stroke-plus"
     />
-    <img
-      src={FaviconAddon}
-      className="absolute left-[83%] translate-x-[34px] top-[71px] w-[51px]"
-    />
   </div>
 );
