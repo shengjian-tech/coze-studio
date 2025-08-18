@@ -23,28 +23,28 @@ import (
 	einoCompose "github.com/cloudwego/eino/compose"
 	"github.com/cloudwego/eino/schema"
 
+	workflowModel "github.com/coze-dev/coze-studio/backend/api/model/crossdomain/workflow"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity"
 	workflowEntity "github.com/coze-dev/coze-studio/backend/domain/workflow/entity"
+
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity/vo"
 )
 
 // TODO (@fanlv): Parameter references need to be modified.
 type Workflow interface {
 	WorkflowAsModelTool(ctx context.Context, policies []*vo.GetPolicy) ([]workflow.ToolFromWorkflow, error)
-	DeleteWorkflow(ctx context.Context, id int64) error
-	PublishWorkflow(ctx context.Context, info *vo.PublishPolicy) (err error)
 	WithResumeToolWorkflow(resumingEvent *workflowEntity.ToolInterruptEvent, resumeData string,
 		allInterruptEvents map[string]*workflowEntity.ToolInterruptEvent) einoCompose.Option
 	ReleaseApplicationWorkflows(ctx context.Context, appID int64, config *ReleaseWorkflowConfig) ([]*vo.ValidateIssue, error)
 	GetWorkflowIDsByAppID(ctx context.Context, appID int64) ([]int64, error)
-	SyncExecuteWorkflow(ctx context.Context, config vo.ExecuteConfig, input map[string]any) (*workflowEntity.WorkflowExecution, vo.TerminatePlan, error)
-	WithExecuteConfig(cfg vo.ExecuteConfig) einoCompose.Option
+	SyncExecuteWorkflow(ctx context.Context, config workflowModel.ExecuteConfig, input map[string]any) (*workflowEntity.WorkflowExecution, vo.TerminatePlan, error)
+	WithExecuteConfig(cfg workflowModel.ExecuteConfig) einoCompose.Option
 	WithMessagePipe() (compose.Option, *schema.StreamReader[*entity.Message])
 }
 
-type ExecuteConfig = vo.ExecuteConfig
-type ExecuteMode = vo.ExecuteMode
+type ExecuteConfig = workflowModel.ExecuteConfig
+type ExecuteMode = workflowModel.ExecuteMode
 type NodeType = entity.NodeType
 
 type WorkflowMessage = entity.Message
@@ -59,14 +59,14 @@ const (
 	ExecuteModeNodeDebug ExecuteMode = "node_debug"
 )
 
-type TaskType = vo.TaskType
+type TaskType = workflowModel.TaskType
 
 const (
 	TaskTypeForeground TaskType = "foreground"
 	TaskTypeBackground TaskType = "background"
 )
 
-type BizType = vo.BizType
+type BizType = workflowModel.BizType
 
 const (
 	BizTypeAgent    BizType = "agent"

@@ -47,6 +47,7 @@ import (
 	crossdatacopy "github.com/coze-dev/coze-studio/backend/crossdomain/contract/datacopy"
 	crossknowledge "github.com/coze-dev/coze-studio/backend/crossdomain/contract/knowledge"
 	crossmessage "github.com/coze-dev/coze-studio/backend/crossdomain/contract/message"
+	crossmodelmgr "github.com/coze-dev/coze-studio/backend/crossdomain/contract/modelmgr"
 	crossplugin "github.com/coze-dev/coze-studio/backend/crossdomain/contract/plugin"
 	crossuser "github.com/coze-dev/coze-studio/backend/crossdomain/contract/user"
 	crossvariables "github.com/coze-dev/coze-studio/backend/crossdomain/contract/variables"
@@ -59,6 +60,7 @@ import (
 	dataCopyImpl "github.com/coze-dev/coze-studio/backend/crossdomain/impl/datacopy"
 	knowledgeImpl "github.com/coze-dev/coze-studio/backend/crossdomain/impl/knowledge"
 	messageImpl "github.com/coze-dev/coze-studio/backend/crossdomain/impl/message"
+	modelmgrImpl "github.com/coze-dev/coze-studio/backend/crossdomain/impl/modelmgr"
 	pluginImpl "github.com/coze-dev/coze-studio/backend/crossdomain/impl/plugin"
 	searchImpl "github.com/coze-dev/coze-studio/backend/crossdomain/impl/search"
 	singleagentImpl "github.com/coze-dev/coze-studio/backend/crossdomain/impl/singleagent"
@@ -130,7 +132,7 @@ func Init(ctx context.Context) (err error) {
 	crossconnector.SetDefaultSVC(connectorImpl.InitDomainService(basicServices.connectorSVC.DomainSVC))
 	crossdatabase.SetDefaultSVC(databaseImpl.InitDomainService(primaryServices.memorySVC.DatabaseDomainSVC))
 	crossknowledge.SetDefaultSVC(knowledgeImpl.InitDomainService(primaryServices.knowledgeSVC.DomainSVC))
-	crossplugin.SetDefaultSVC(pluginImpl.InitDomainService(primaryServices.pluginSVC.DomainSVC))
+	crossplugin.SetDefaultSVC(pluginImpl.InitDomainService(primaryServices.pluginSVC.DomainSVC, infra.TOSClient))
 	crossvariables.SetDefaultSVC(variablesImpl.InitDomainService(primaryServices.memorySVC.VariablesDomainSVC))
 	crossworkflow.SetDefaultSVC(workflowImpl.InitDomainService(primaryServices.workflowSVC.DomainSVC))
 	crossconversation.SetDefaultSVC(conversationImpl.InitDomainService(complexServices.conversationSVC.ConversationDomainSVC))
@@ -140,6 +142,7 @@ func Init(ctx context.Context) (err error) {
 	crossuser.SetDefaultSVC(crossuserImpl.InitDomainService(basicServices.userSVC.DomainSVC))
 	crossdatacopy.SetDefaultSVC(dataCopyImpl.InitDomainService(basicServices.infra))
 	crosssearch.SetDefaultSVC(searchImpl.InitDomainService(complexServices.searchSVC.DomainSVC))
+	crossmodelmgr.SetDefaultSVC(modelmgrImpl.InitDomainService(infra.ModelMgr, nil))
 
 	return nil
 }
@@ -252,14 +255,15 @@ func (b *basicServices) toPluginServiceComponents() *plugin.ServiceComponents {
 
 func (b *basicServices) toKnowledgeServiceComponents(memoryService *memory.MemoryApplicationServices) *knowledge.ServiceComponents {
 	return &knowledge.ServiceComponents{
-		DB:       b.infra.DB,
-		IDGenSVC: b.infra.IDGenSVC,
-		Storage:  b.infra.TOSClient,
-		RDB:      memoryService.RDBDomainSVC,
-		ImageX:   b.infra.ImageXClient,
-		ES:       b.infra.ESClient,
-		EventBus: b.eventbus.resourceEventBus,
-		CacheCli: b.infra.CacheCli,
+		DB:                  b.infra.DB,
+		IDGenSVC:            b.infra.IDGenSVC,
+		Storage:             b.infra.TOSClient,
+		RDB:                 memoryService.RDBDomainSVC,
+		SearchStoreManagers: b.infra.SearchStoreManagers,
+		EventBus:            b.eventbus.resourceEventBus,
+		CacheCli:            b.infra.CacheCli,
+		OCR:                 b.infra.OCR,
+		ParserManager:       b.infra.ParserManager,
 	}
 }
 
@@ -285,7 +289,6 @@ func (b *basicServices) toWorkflowServiceComponents(pluginSVC *plugin.PluginAppl
 		VariablesDomainSVC: memorySVC.VariablesDomainSVC,
 		PluginDomainSVC:    pluginSVC.DomainSVC,
 		KnowledgeDomainSVC: knowledgeSVC.DomainSVC,
-		ModelManager:       b.infra.ModelMgr,
 		DomainNotifier:     b.eventbus.resourceEventBus,
 		CPStore:            checkpoint.NewRedisStore(b.infra.CacheCli),
 		CodeRunner:         b.infra.CodeRunner,
