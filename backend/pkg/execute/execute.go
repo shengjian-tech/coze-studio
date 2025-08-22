@@ -14,28 +14,31 @@
  * limitations under the License.
  */
 
-package entity
+package execute
 
 import (
-	"github.com/coze-dev/coze-studio/backend/api/model/crossdomain/knowledge"
+	"context"
+	"fmt"
+	"runtime/debug"
 )
 
-type Slice = knowledge.Slice
+func RunWithContextDone(ctx context.Context, fn func() error) error {
+	errChan := make(chan error, 1)
+	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				errChan <- fmt.Errorf("exec func panic, %v \n %s", err, debug.Stack())
+			}
+			close(errChan)
+		}()
+		err := fn()
+		errChan <- err
+	}()
 
-type WhereSliceOpt struct {
-	KnowledgeID int64
-	DocumentID  int64
-	DocumentIDs []int64
-	Keyword     *string
-	PageSize    int64
-	Offset      int64
-	NotEmpty    *bool
-}
-
-type WherePhotoSliceOpt struct {
-	KnowledgeID int64
-	DocumentIDs []int64
-	Limit       *int
-	Offset      *int
-	HasCaption  *bool
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case err := <-errChan:
+		return err
+	}
 }

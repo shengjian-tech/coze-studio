@@ -58,9 +58,7 @@ import (
 	"github.com/coze-dev/coze-studio/backend/infra/contract/rdb"
 	rdbEntity "github.com/coze-dev/coze-studio/backend/infra/contract/rdb/entity"
 	"github.com/coze-dev/coze-studio/backend/infra/contract/storage"
-	"github.com/coze-dev/coze-studio/backend/infra/impl/document/parser/builtin"
 	"github.com/coze-dev/coze-studio/backend/infra/impl/document/progressbar"
-	"github.com/coze-dev/coze-studio/backend/infra/impl/document/rerank/rrf"
 	"github.com/coze-dev/coze-studio/backend/pkg/errorx"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/slices"
@@ -86,12 +84,6 @@ func NewKnowledgeSVC(config *KnowledgeSVCConfig) (Knowledge, eventbus.ConsumerHa
 		enableCompactTable:  ptr.FromOrDefault(config.EnableCompactTable, true),
 		cacheCli:            config.CacheCli,
 		modelFactory:        config.ModelFactory,
-	}
-	if svc.reranker == nil {
-		svc.reranker = rrf.NewRRFReranker(0)
-	}
-	if svc.parseManager == nil {
-		svc.parseManager = builtin.NewManager(config.Storage, config.OCR, nil)
 	}
 
 	return svc, svc
@@ -884,9 +876,8 @@ func (k *knowledgeSVC) ListSlice(ctx context.Context, request *ListSliceRequest)
 		KnowledgeID: ptr.From(request.KnowledgeID),
 		DocumentID:  ptr.From(request.DocumentID),
 		Keyword:     request.Keyword,
-		Sequence:    request.Sequence,
+		Offset:      request.Sequence,
 		PageSize:    request.Limit,
-		Offset:      request.Offset,
 	})
 	if err != nil {
 		logs.CtxErrorf(ctx, "list slice failed, err: %v", err)
@@ -1383,12 +1374,12 @@ func (k *knowledgeSVC) ListPhotoSlice(ctx context.Context, request *ListPhotoSli
 	if request == nil {
 		return nil, errorx.New(errno.ErrKnowledgeInvalidParamCode, errorx.KV("msg", "request is empty"))
 	}
-	sliceArr, total, err := k.sliceRepo.FindSliceByCondition(ctx, &entity.WhereSliceOpt{
+	sliceArr, total, err := k.sliceRepo.ListPhotoSlice(ctx, &entity.WherePhotoSliceOpt{
 		KnowledgeID: request.KnowledgeID,
 		DocumentIDs: request.DocumentIDs,
-		Offset:      int64(ptr.From(request.Offset)),
-		PageSize:    int64(ptr.From(request.Limit)),
-		NotEmpty:    request.HasCaption,
+		Offset:      request.Offset,
+		Limit:       request.Limit,
+		HasCaption:  request.HasCaption,
 	})
 	if err != nil {
 		return nil, errorx.New(errno.ErrKnowledgeDBCode, errorx.KV("msg", err.Error()))
