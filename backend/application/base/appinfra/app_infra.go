@@ -47,6 +47,7 @@ import (
 	"github.com/coze-dev/coze-studio/backend/infra/impl/cache/redis"
 	"github.com/coze-dev/coze-studio/backend/infra/impl/coderunner/direct"
 	"github.com/coze-dev/coze-studio/backend/infra/impl/coderunner/sandbox"
+	"github.com/coze-dev/coze-studio/backend/infra/impl/document/ocr/openaiocr"
 	"github.com/coze-dev/coze-studio/backend/infra/impl/document/ocr/ppocr"
 	"github.com/coze-dev/coze-studio/backend/infra/impl/document/ocr/veocr"
 	"github.com/coze-dev/coze-studio/backend/infra/impl/document/parser/builtin"
@@ -260,6 +261,16 @@ func initOCR() ocr.OCR {
 		url := os.Getenv(consts.PPOCRAPIURL)
 		client := &http.Client{}
 		ocr = ppocr.NewOCR(&ppocr.Config{Client: client, URL: url})
+	case "openai":
+		fmt.Println("openai_OCR初始化了***************************")
+
+		url := os.Getenv(consts.OPENAIOCRAPIURL)
+		apiKey := os.Getenv(consts.OPENAIOCRAPIKEY)
+		model := os.Getenv(consts.OPENAIOCRMODEL)
+
+		client := &http.Client{}
+		ocr = openaiocr.NewOCR(&openaiocr.Config{Client: client, URL: url, APIKey: apiKey, Model: model})
+
 	default:
 		// accept ocr not configured
 	}
