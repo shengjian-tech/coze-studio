@@ -1,6 +1,8 @@
 module github.com/coze-dev/coze-studio/backend
 
-go 1.24.0
+go 1.24.4
+
+toolchain go1.24.6
 
 replace github.com/apache/thrift => github.com/apache/thrift v0.13.0
 
@@ -25,7 +27,7 @@ require (
 	github.com/hertz-contrib/sse v0.1.0
 	github.com/joho/godotenv v1.5.1
 	github.com/matoous/go-nanoid v1.5.1
-	github.com/milvus-io/milvus-proto/go-api/v2 v2.5.0-beta.0.20250325034212-6e98baa34971 // indirect
+	github.com/milvus-io/milvus-proto/go-api/v2 v2.6.0 // indirect
 	github.com/nikolalohinski/gonja v1.5.3 // indirect
 	github.com/onsi/gomega v1.27.3
 	github.com/pingcap/tidb/pkg/parser v0.0.0-20250417044355-c5882b1f6c58
@@ -74,7 +76,7 @@ require (
 	github.com/volcengine/ve-tos-golang-sdk/v2 v2.7.17
 	github.com/yuin/goldmark v1.4.13
 	golang.org/x/image v0.22.0
-	golang.org/x/oauth2 v0.23.0
+	golang.org/x/oauth2 v0.27.0
 	google.golang.org/genai v1.18.0
 )
 
@@ -105,7 +107,7 @@ require (
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
-	github.com/milvus-io/milvus/client/v2 v2.0.0-20250422183838-6b30e9ae6002
+	github.com/milvus-io/milvus/client/v2 v2.5.6
 	github.com/smartystreets/goconvey v1.8.1
 )
 
@@ -202,7 +204,7 @@ require (
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-sqlite3 v1.14.15 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
-	github.com/milvus-io/milvus/pkg/v2 v2.0.0-20250319085209-5a6b4e56d59e // indirect
+	github.com/milvus-io/milvus/pkg/v2 v2.6.0 // indirect
 	github.com/minio/crc64nvme v1.0.1 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/minio/minio-go/v7 v7.0.90
@@ -211,7 +213,7 @@ require (
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/nyaruka/phonenumbers v1.0.55 // indirect
 	github.com/opencontainers/runtime-spec v1.0.2 // indirect
-	github.com/panjf2000/ants/v2 v2.7.2 // indirect
+	github.com/panjf2000/ants/v2 v2.11.3 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
 	github.com/perimeterx/marshmallow v1.1.5 // indirect
@@ -232,7 +234,7 @@ require (
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/rs/xid v1.6.0 // indirect
 	github.com/samber/lo v1.27.0 // indirect
-	github.com/shirou/gopsutil/v3 v3.22.9 // indirect
+	github.com/shirou/gopsutil/v3 v3.23.7 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/slongfield/pyfmt v0.0.0-20220222012616-ea85ff4c361f
 	github.com/smarty/assertions v1.16.0 // indirect
