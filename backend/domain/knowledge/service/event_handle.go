@@ -21,7 +21,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"net/url"
+	"os"
+	"os/exec"
+	"path"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -68,6 +75,7 @@ func (k *knowledgeSVC) HandleMessage(ctx context.Context, msg *eventbus.Message)
 	if err = sonic.Unmarshal(msg.Body, event); err != nil {
 		return errorx.New(errno.ErrKnowledgeParseJSONCode, errorx.KV("msg", fmt.Sprintf("unmarshal event failed, err: %v", err)))
 	}
+	fmt.Printf("准备进行切片了........,%v", event.Type)
 
 	switch event.Type {
 	case entity.EventTypeIndexDocuments:
@@ -227,7 +235,7 @@ func (k *knowledgeSVC) handleIndexingErrors(ctx context.Context, event *entity.E
 			int32(entity.DocumentStatusFailed), ptr.From(err).Error())
 		return
 	}
-
+	fmt.Printf("index_dock_error:------%v\n", err)
 	if ptr.From(err) != nil {
 		var status int32
 		var errMsg string
@@ -907,6 +915,70 @@ func (k *knowledgeSVC) documentReviewEventHandler(ctx context.Context, event *en
 	if err != nil {
 		return errorx.New(errno.ErrKnowledgePutObjectFailCode, errorx.KV("msg", fmt.Sprintf("put object failed, err: %v", err)))
 	}
+	//文档转换将docx或者doc文件转换成pdf
+	fileExt := filepath.Ext(review.Uri)
+	if fileExt == ".doc" || fileExt == ".docx" {
+		fileName := filepath.Base(review.Uri)
+		//因为前端的浏览原始文件使用的是react-pdf 所以需要把文件转为pdf格式(txt和md不需要转换,excel 需要转换?我也不知道哦)
+		tempPath := os.Getenv("Temp_File_Path")
+		docxBytes, error := k.storage.GetObject(ctx, review.Uri)
+
+		if error != nil {
+			logs.CtxErrorf(ctx, "storage get docx failed: %v", error)
+			return error
+		}
+		docxPath := filepath.Join(tempPath, fileName)
+		tempDocx, errorTemp := os.Create(docxPath)
+		if errorTemp != nil {
+			logs.CtxErrorf(ctx, "create temp file failed: %v", errorTemp)
+			return errorTemp
+		}
+
+		// 写入所有数据
+		totalWritten := 0
+		for totalWritten < len(docxBytes) {
+			n, err := tempDocx.Write(docxBytes[totalWritten:])
+			if err != nil {
+				return fmt.Errorf("写入数据失败: %v", err)
+			}
+			totalWritten += n
+		}
+		//关闭临时文件
+		defer tempDocx.Close()
+		//关闭流
+		defer os.Remove(tempDocx.Name())
+		//文件转换
+		pdfFile, perror := FileConversionForPdf(docxPath)
+
+		if perror != nil {
+			logs.CtxErrorf(ctx, "fileConversonForPdf error %v", perror)
+			return perror
+		}
+		if pdfFile != "" {
+			//userID := ctxutil.GetUIDFromCtx(ctx)
+			//to_tos_url := fmt.Sprintf("FileBizType.Knowledge/%d_%d.%s", userID, time.Now().UnixNano(), "pdf")
+			//uripdf := getTosUri(c.UserID, "pdf")
+			content, _ := os.ReadFile(pdfFile)
+			tosPdfUri := ReplaceWordWithPDF(review.Uri)
+			erru := k.storage.PutObject(ctx, tosPdfUri, content)
+
+			defer func() {
+				err := os.Remove(tempDocx.Name())
+				if err != nil {
+					log.Println("Failed to remove temp file:", err)
+				} else {
+					fmt.Println("Temporary file deleted:", tempDocx.Name())
+				}
+			}()
+
+			if erru != nil {
+				logs.CtxErrorf(ctx, "docx for pdf put storage error %v", erru)
+			}
+			//c.Documents[i].
+		}
+
+	}
+
 	return k.reviewRepo.UpdateReview(ctx, reviewModel.ID, map[string]interface{}{
 		"status":         int32(entity.ReviewStatus_Enable),
 		"chunk_resp_uri": tosUri,
@@ -927,4 +999,70 @@ func (k *knowledgeSVC) slice2Document(ctx context.Context, src *entity.Document,
 		return nil, errorx.New(errno.ErrKnowledgeInvalidParamCode, errorx.KV("msg", fmt.Sprintf("document type invalid, type=%d", src.Type)))
 	}
 	return fn(ctx, slice, src.TableInfo.Columns, k.enableCompactTable)
+}
+
+// 文件转换(将docx文件等转换成
+func FileConversionForPdf(tempFilePath string) (string, error) {
+	_, err := os.Stat(tempFilePath)
+	if err != nil {
+		errorx.New(errno.ErrKnowledegeFileConverSionCode, errorx.KV("msg", "docx or doc not found"))
+		return "", err // 文件不存在
+	}
+	if os.IsNotExist(err) {
+		errorx.New(errno.ErrKnowledegeFileConverSionCode, errorx.KV("msg", "docx or doc not found"))
+		return "", err // 文件不存在
+	}
+	//获取文件后缀名
+	sp := filepath.Ext(tempFilePath)
+	if sp != ".doc" && sp != ".docx" {
+		errorx.New(errno.ErrKnowledegeFileConverSionCode, errorx.KV("msg", "file is not doc or docx"))
+		return "", nil // 文件不存在
+	}
+
+	//调用libeoffice将docx转换为pdf
+	ouputPath := filepath.Join(os.Getenv("Temp_File_Path"))
+	cmd := exec.Command(
+		"soffice",
+		"--headless",
+		"--convert-to", "pdf",
+		"--outdir", ouputPath,
+		tempFilePath,
+	)
+	out, err := cmd.CombinedOutput() // 捕获 stdout + stderr
+	fmt.Println(string(out))         // 打印所有输出
+
+	if err != nil {
+		errorx.New(errno.ErrKnowledegeFileConverSionCode, errorx.KV("msg", "file conversion for pdf error"))
+
+		return "", nil
+	}
+	filePathLast := filepath.Base(tempFilePath)
+	filename := strings.TrimSuffix(filePathLast, sp)
+
+	return filepath.Join(ouputPath, filename+".pdf"), nil
+}
+
+// IsWordFile 判断是否是 Word 文件 (.docx 或 .doc)
+func IsWordFile(uri string) bool {
+	u, err := url.Parse(uri)
+	if err != nil {
+		return false
+	}
+	ext := strings.ToLower(path.Ext(u.Path))
+	return ext == ".docx" || ext == ".doc"
+}
+
+// ReplaceWordWithPDF 如果是 .doc/.docx 结尾，就替换为 .pdf
+func ReplaceWordWithPDF(uri string) string {
+	u, err := url.Parse(uri)
+	if err != nil {
+		return uri // 解析失败，原样返回
+	}
+	ext := strings.ToLower(path.Ext(u.Path))
+	if ext == ".docx" || ext == ".doc" {
+		// 去掉旧扩展名，加上 .pdf
+		u.Path = strings.TrimSuffix(u.Path, ext) + ".pdf"
+		return u.String()
+	}
+	return uri
 }

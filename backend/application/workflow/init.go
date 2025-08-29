@@ -18,19 +18,25 @@ package workflow
 
 import (
 	"context"
+	"path/filepath"
+
+	"os"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/cloudwego/eino/callbacks"
 	"github.com/cloudwego/eino/compose"
 	"gorm.io/gorm"
 
 	"github.com/coze-dev/coze-studio/backend/crossdomain/impl/code"
+
 	knowledge "github.com/coze-dev/coze-studio/backend/domain/knowledge/service"
 	dbservice "github.com/coze-dev/coze-studio/backend/domain/memory/database/service"
 	variables "github.com/coze-dev/coze-studio/backend/domain/memory/variables/service"
 	plugin "github.com/coze-dev/coze-studio/backend/domain/plugin/service"
 	search "github.com/coze-dev/coze-studio/backend/domain/search/service"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow"
-
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/config"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/service"
 	workflowservice "github.com/coze-dev/coze-studio/backend/domain/workflow/service"
 	"github.com/coze-dev/coze-studio/backend/infra/contract/cache"
@@ -57,17 +63,44 @@ type ServiceComponents struct {
 	WorkflowBuildInChatModel chatmodel.BaseChatModel
 }
 
-func InitService(ctx context.Context, components *ServiceComponents) (*ApplicationService, error) {
+func initWorkflowConfig() (workflow.WorkflowConfig, error) {
+	wd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+	configBs, err := os.ReadFile(filepath.Join(wd, "resources/conf/workflow/config.yaml"))
+	if err != nil {
+		return nil, err
+	}
+	var cfg *config.WorkflowConfig
+	err = yaml.Unmarshal(configBs, &cfg)
+	if err != nil {
+		return nil, err
+	}
+	return cfg, nil
+}
+
+func InitService(_ context.Context, components *ServiceComponents) (*ApplicationService, error) {
 	service.RegisterAllNodeAdaptors()
 
-	workflowRepo := service.NewWorkflowRepository(components.IDGen, components.DB, components.Cache,
-		components.Tos, components.CPStore, components.WorkflowBuildInChatModel)
+	cfg, err := initWorkflowConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	workflowRepo, err := service.NewWorkflowRepository(components.IDGen, components.DB, components.Cache,
+		components.Tos, components.CPStore, components.WorkflowBuildInChatModel, cfg)
+	if err != nil {
+		return nil, err
+	}
+
 	workflow.SetRepository(workflowRepo)
 
 	workflowDomainSVC := service.NewWorkflowService(workflowRepo)
 
 	code.SetCodeRunner(components.CodeRunner)
 	callbacks.AppendGlobalHandlers(workflowservice.GetTokenCallbackHandler())
+
 	setEventBus(components.DomainNotifier)
 
 	SVC.DomainSVC = workflowDomainSVC
