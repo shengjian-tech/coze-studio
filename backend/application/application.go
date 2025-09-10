@@ -19,6 +19,7 @@ package application
 import (
 	"context"
 	"fmt"
+	"github.com/coze-dev/coze-studio/backend/application/vPlugin/textToImage"
 
 	"github.com/coze-dev/coze-studio/backend/application/openauth"
 	"github.com/coze-dev/coze-studio/backend/application/template"
@@ -89,6 +90,7 @@ type basicServices struct {
 	templateSVC  *template.ApplicationService
 	openAuthSVC  *openauth.OpenAuthApplicationService
 	uploadSVC    *upload.UploadService
+	ttImgSVC     *textToImage.TextToImageApplicationService
 }
 
 type primaryServices struct {
@@ -174,6 +176,8 @@ func initBasicServices(ctx context.Context, infra *appinfra.AppDependencies, e *
 		IDGen:   infra.IDGenSVC,
 		Storage: infra.TOSClient,
 	})
+	//wen生图
+	ttImgSVC := textToImage.InitService(ctx, infra.TextToImage)
 
 	return &basicServices{
 		infra:        infra,
@@ -185,6 +189,7 @@ func initBasicServices(ctx context.Context, infra *appinfra.AppDependencies, e *
 		templateSVC:  templateSVC,
 		openAuthSVC:  openAuthSVC,
 		uploadSVC:    uploadSVC,
+		ttImgSVC:     ttImgSVC,
 	}, nil
 }
 

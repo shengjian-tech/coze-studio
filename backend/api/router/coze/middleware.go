@@ -1585,3 +1585,8 @@ func _getonlineappdataMw() []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _vpMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}

@@ -58,6 +58,7 @@ const (
 	ErrKnowledgeParseResultEmptyCode           = 105000035
 	ErrKnowledgeCacheClientSetFailCode         = 105000036
 	ErrKnowledgeCheckTableSliceValidCode       = 105000037
+	ErrKnowledegeFileConverSionCode            = 105000038
 )
 
 func init() {
@@ -272,6 +273,11 @@ func init() {
 	code.Register(
 		ErrKnowledgeCheckTableSliceValidCode,
 		"slice content validation failed, please check if the input is correct:{msg}",
+		code.WithAffectStability(false),
+	)
+	code.Register(
+		ErrKnowledegeFileConverSionCode,
+		"File conversion failed:{msg}",
 		code.WithAffectStability(false),
 	)
 }

@@ -907,3 +907,31 @@
       deprecated: false
       method: get
       sub_url: /v5/place/around
+- plugin_id: 24
+  product_id: 7328314516272463925
+  deprecated: false
+  version: v1.0.0
+  openapi_doc_file: text_to_image.yaml
+  plugin_type: 1
+  manifest:
+    schema_version: v1
+    name_for_model: 通过文字描述生成图像
+    name_for_human: 图像生成
+    description_for_model: 通过文字描述生成图像
+    description_for_human: 通过文字描述生成图像
+    auth:
+      type: none
+      # service token apply to https://127.0.0.1:8888/
+    logo_url: official_plugin_icon/plugin_wolfram_alpha.png
+    api:
+      type: openapi
+    common_params:
+      body: [ ]
+      header: [ ]
+      path: [ ]
+      query: [ ]
+  tools:
+    - tool_id: 40001013
+      deprecated: false
+      method: post
+      sub_url: /vp/textToImage

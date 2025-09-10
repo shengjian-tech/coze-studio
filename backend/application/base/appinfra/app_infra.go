@@ -20,6 +20,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/coze-dev/coze-studio/backend/infra/contract/document/textToImage"
+	"github.com/coze-dev/coze-studio/backend/infra/impl/document/textToImage/openaiTextToImage"
+	"github.com/coze-dev/coze-studio/backend/infra/impl/document/textToImage/qwenTextToImage"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -101,6 +104,7 @@ type AppDependencies struct {
 	Rewriter                 messages2query.MessagesToQuery
 	NL2SQL                   nl2sql.NL2SQL
 	WorkflowBuildInChatModel chatmodel.BaseChatModel
+	TextToImage              textToImage.TextToImg
 }
 
 func Init(ctx context.Context) (*AppDependencies, error) {
@@ -168,6 +172,8 @@ func Init(ctx context.Context) (*AppDependencies, error) {
 	deps.CodeRunner = initCodeRunner()
 
 	deps.OCR = initOCR()
+	//文生图
+	deps.TextToImage = initTextToImage()
 
 	imageAnnotationModel, _, err := getBuiltinChatModel(ctx, "IA_")
 	if err != nil {
@@ -415,6 +421,27 @@ func initOCR() ocr.OCR {
 	}
 
 	return ocr
+}
+func initTextToImage() textToImage.TextToImg {
+	var ttImg textToImage.TextToImg
+	//获取配置
+	switch os.Getenv(consts.TEXTTOTMAGETYPE) {
+	case "openai":
+
+		url := os.Getenv(consts.TEXTTOIMAGEURL)
+		apiKey := os.Getenv(consts.TEXTTOIMAGEAPIKEY)
+		model := os.Getenv(consts.TEXTTOIMAGEMODEL)
+		ttImg = openaiTextToImage.NewTextToImage(apiKey, url, model)
+	case "qwen":
+		url := os.Getenv(consts.TEXTTOIMAGEURL)
+		apiKey := os.Getenv(consts.TEXTTOIMAGEAPIKEY)
+		model := os.Getenv(consts.TEXTTOIMAGEMODEL)
+		ttImg = qwenTextToImage.NewTextToImage(apiKey, url, model)
+
+	default:
+		//unkonwn
+	}
+	return ttImg
 }
 
 func initParserManager(storage storage.Storage, ocr ocr.OCR, imageAnnotationModel chatmodel.BaseChatModel) (parser.Manager, error) {

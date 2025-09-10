@@ -40,6 +40,7 @@ var noNeedSessionCheckPath = map[string]bool{
 	"/api/publishThird/third_login":        true,
 	"/api/publishThird/third_loginQrCode":  true,
 	"/api/publishThird/get_tweet_url":      true,
+	"/vp/textToImage":                      true,
 }
 
 func SessionAuthMW() app.HandlerFunc {

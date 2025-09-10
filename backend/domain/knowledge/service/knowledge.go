@@ -26,6 +26,7 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -397,6 +398,7 @@ func (k *knowledgeSVC) UpdateDocument(ctx context.Context, request *UpdateDocume
 		}
 	}
 	doc.UpdatedAt = time.Now().UnixMilli()
+	fmt.Println("updateDoc:------%v\n", doc)
 	err = k.documentRepo.Update(ctx, doc)
 	if err != nil {
 		logs.CtxErrorf(ctx, "[UpdateDocument] update document failed, err: %v", err)
@@ -1280,7 +1282,13 @@ func (k *knowledgeSVC) fromModelDocument(ctx context.Context, document *model.Kn
 	default:
 	}
 	if len(document.URI) != 0 {
-		objUrl, err := k.storage.GetObjectUrl(ctx, document.URI)
+		var docUrI string
+		if document.FileExtension == "doc" || document.FileExtension == "docx" {
+			docUrI = strings.TrimSuffix(document.URI, filepath.Ext(document.URI)) + ".pdf"
+		} else {
+			docUrI = document.URI
+		}
+		objUrl, err := k.storage.GetObjectUrl(ctx, docUrI)
 		if err != nil {
 			logs.CtxErrorf(ctx, "get object url failed, err: %v", err)
 			return nil, errorx.New(errno.ErrKnowledgeGetObjectURLFailCode, errorx.KV("msg", err.Error()))
@@ -1425,10 +1433,10 @@ func (k *knowledgeSVC) ExtractPhotoCaption(ctx context.Context, request *Extract
 	reader := bytes.NewReader(imageByte)
 	schemaDoc, err := parser.Parse(ctx, reader)
 	if err != nil {
-		return nil, errorx.New(errno.ErrKnowledgeParserParseFailCode, errorx.KV("msg", err.Error()))
+		return nil, errorx.New(123, errorx.KV("msg", err.Error()))
 	}
 	if len(schemaDoc) == 0 {
-		return nil, errorx.New(errno.ErrKnowledgeParserParseFailCode, errorx.KV("msg", "parse fail, schema doc is empty"))
+		return nil, errorx.New(124, errorx.KV("msg", "parse fail, schema doc is empty"))
 	}
 	response.Caption = schemaDoc[0].Content
 	return response, nil
@@ -1509,4 +1517,13 @@ func (k *knowledgeSVC) genMultiIDs(ctx context.Context, counts int) ([]int64, er
 		allIDs = append(allIDs, ids...)
 	}
 	return allIDs, nil
+}
+
+/*
+*
+文件格式转换
+*/
+func FileConversionForPDF(ctx context.Context, fileUrl string) error {
+
+	return nil
 }
