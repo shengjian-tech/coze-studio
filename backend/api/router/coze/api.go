@@ -496,4 +496,8 @@ func Register(r *server.Hertz) {
 		_chat := _v3.Group("/chat", _chatMw()...)
 		_chat.POST("/cancel", append(_cancelchatapiMw(), coze.CancelChatApi)...)
 	}
+	{
+		_vp:=root.Group("/vp",_vpMw()...)
+		_vp.POST("/textToImage",coze.TextToImage)
+	}
 }
