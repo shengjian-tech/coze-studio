@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package main
+package xiaohongshu
 
 import (
 	"context"
@@ -29,7 +29,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
-	"github.com/coze-dev/coze-studio/backend/domain/publishThird/entiy"
+	"github.com/coze-dev/coze-studio/backend/domain/publishThird/entity"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
@@ -203,7 +203,7 @@ func publishNote(ctx context.Context, c *app.RequestContext) {
 		}
 
 		// 发布内容
-		content := entiy.PublishImageContent{
+		content := entity.PublishImageContent{
 			Title:      req.Title,
 			Content:    req.Content,
 			ImagePaths: req.ImagePaths,
@@ -286,8 +286,14 @@ func loadCookies(page *rod.Page) bool {
 		return false
 	}
 
+	now := time.Now().Unix() // 当前时间的 Unix 秒数
 	var params []*proto.NetworkCookieParam
 	for _, c := range cookies {
+		// 如果 c.Expires 为 0，说明是会话 cookie，不用判断
+		if c.Expires != 0 && int64(c.Expires) < now {
+			// cookie 已过期，跳过
+			continue
+		}
 		params = append(params, &proto.NetworkCookieParam{
 			Name:     c.Name,
 			Value:    c.Value,
@@ -373,7 +379,7 @@ func NewPublishImageAction(page *rod.Page) (*PublishAction, error) {
 }
 
 // Publish 发布内容
-func (p *PublishAction) publishArticle(ctx context.Context, content *entiy.PublishImageContent) (string, error) {
+func (p *PublishAction) publishArticle(ctx context.Context, content *entity.PublishImageContent) (string, error) {
 	if len(content.ImagePaths) == 0 {
 		return "", errors.New("图片不能为空")
 	}
@@ -389,6 +395,81 @@ func (p *PublishAction) publishArticle(ctx context.Context, content *entiy.Publi
 	}
 
 	return "", nil
+}
+
+type NoteInfo struct {
+	URL          string
+	LikeCount    string
+	CollectCount string
+	ChatCount    string
+}
+
+// getInfo 获取点赞量、收藏量、评论量
+func (p *PublishAction) getTweetInfo(ctx context.Context, links []string) ([]NoteInfo, error) {
+	browser := newBrowser(true)
+	defer browser.MustClose()
+
+	resultsCh := make(chan NoteInfo, len(links))
+	errCh := make(chan error, len(links))
+
+	// 使用原来的 ctx，不要重新创建
+	for _, link := range links {
+		link := link // 避免闭包捕获
+		go func() {
+			// 每个页面加载也设置单独超时
+			_, cancel := context.WithTimeout(ctx, 20*time.Second)
+			defer cancel()
+
+			notePage := browser.MustPage(link).
+				Timeout(20 * time.Second).MustWaitLoad()
+
+			var likeCount, collectCount, chatCount string
+
+			// 获取点赞
+			if likeEl := notePage.Timeout(20*time.Second).MustElementR(".like-wrapper .count", `\d|万`); likeEl != nil {
+				likeCount = likeEl.MustText()
+			} else {
+				likeCount = "N/A"
+			}
+
+			// 获取收藏
+			collectCount = notePage.MustElement(".collect-wrapper .count").MustText()
+
+			if collectCount == "" {
+				collectCount = "N/A"
+			}
+
+			// 获取评论
+			chatCount = notePage.MustElement(".chat-wrapper .count").MustText()
+			if chatCount == "" {
+				chatCount = "N/A"
+			}
+
+			log.Printf("链接: %s 点赞:%s 收藏:%s 评论:%s", link, likeCount, collectCount, chatCount)
+
+			resultsCh <- NoteInfo{
+				URL:          link,
+				LikeCount:    likeCount,
+				CollectCount: collectCount,
+				ChatCount:    chatCount,
+			}
+		}()
+	}
+
+	var results []NoteInfo
+	for i := 0; i < len(links); i++ {
+		select {
+		case res := <-resultsCh:
+			results = append(results, res)
+		case err := <-errCh:
+			log.Println("抓取错误:", err)
+			// 可以选择继续或直接返回错误，这里继续抓取
+		case <-ctx.Done():
+			return results, ctx.Err() // 上下文超时或取消
+		}
+	}
+
+	return results, nil
 }
 
 // uploadImages 上传图片

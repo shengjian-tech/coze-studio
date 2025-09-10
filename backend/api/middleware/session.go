@@ -35,6 +35,11 @@ import (
 var noNeedSessionCheckPath = map[string]bool{
 	"/api/passport/web/email/login/":       true,
 	"/api/passport/web/email/register/v2/": true,
+	"/api/publishThird/get_tweet_info":     true,
+	"/api/publishThird/publish_xhs_tweet":  true,
+	"/api/publishThird/third_login":        true,
+	"/api/publishThird/third_loginQrCode":  true,
+	"/api/publishThird/get_tweet_url":      true,
 }
 
 func SessionAuthMW() app.HandlerFunc {

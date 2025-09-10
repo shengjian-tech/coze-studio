@@ -425,6 +425,16 @@ func Register(r *server.Hertz) {
 				_upload1.POST("/auth_token", append(_getworkflowuploadauthtokenMw(), coze.GetWorkflowUploadAuthToken)...)
 			}
 		}
+
+		{
+			_publishThird := _api.Group("/publishThird", _publishThirdMw()...)
+			_publishThird.POST("/get_tweet_info", coze.GetTweetInfo)
+			_publishThird.POST("/publish_xhs_tweet", coze.PublishToXHS)
+			_publishThird.POST("/third_login", coze.LoginToXHS)
+			_publishThird.POST("/third_loginQrCode", coze.GetXhsLoginQr)
+			_publishThird.POST("/get_tweet_url", coze.TweetUrlsByXhs)
+		}
+
 	}
 	{
 		_v1 := root.Group("/v1", _v1Mw()...)

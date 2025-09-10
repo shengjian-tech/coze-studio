@@ -152,6 +152,21 @@ func _knowledgeMw() []app.HandlerFunc {
 	return nil
 }
 
+func _publishThirdMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getTweetInfoMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _PublishToXHSMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
 func _createdatasetMw() []app.HandlerFunc {
 	// your code...
 	return nil

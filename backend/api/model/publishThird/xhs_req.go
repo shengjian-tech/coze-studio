@@ -20,12 +20,35 @@ import (
 	"github.com/coze-dev/coze-studio/backend/api/model/base"
 
 	publishThird_commion "github.com/coze-dev/coze-studio/backend/api/model/publishThird/commion"
-	"github.com/coze-dev/coze-studio/backend/domain/publishThird/entiy"
+	"github.com/coze-dev/coze-studio/backend/domain/publishThird/entity"
 )
 
 type GetXHSRequest struct {
-	ImageContent *entiy.PublishImageContent             `thrift:"ImageContent,1,optional" json:"entity_type,omitempty"`
+	ImageContent *entity.PublishImageContent            `thrift:"ImageContent,1,optional" json:"entity_type,omitempty"`
 	PublishType  *publishThird_commion.PublishThirdType `thrift:"PublishType,2,required" json:"publish_type,omitempty"`
+	Title        string                                 `thrift:"Title,3,required" json:"Title,required"`
+	Content      string                                 `thrift:"Content,4,required" json:"Content,required"`
+	ImagePaths   []string                               `thrift:"ImagePaths,5,optional" json:"ImagePaths,omitempty"`
+}
+
+type GetTweetXHSRequest struct {
+	TweetType *publishThird_commion.TweetType `thrift:"TweetType,1,optional" json:"TweetType,omitempty"`
+	Data      []string                        `thrift:"Data,2,required" json:"Data,omitempty"`
+}
+
+type GetThirdLoginRequest struct {
+	LoginType *publishThird_commion.LoginType `thrift:"LoginType,1,required" json:"LoginType,omitempty"`
+}
+
+type GetThirdUrlRequest struct {
+	ThirdUrlType *publishThird_commion.LoginType `thrift:"LoginType,1,required" json:"LoginType,omitempty"`
+	UserId       *int64                          `thrift:"UserId,2,required" json:"UserId,omitempty"`
+	UrlType      *int32                          `thrift:"UrlType,3,required" json:"UrlType,omitempty"`
+	Status       *int32                          `thrift:"Status,4,required" json:"Status,omitempty"`
+	Introduction *string                         `thrift:"Introduction,5,optional" json:"Introduction,omitempty"`
+	Page         *int                            `thrift:"Page,6,required" json:"Page,omitempty"`
+	PageSize     *int                            `thrift:"PageSize,7,required" json:"PageSize,omitempty"`
+	Order        *int32                          `thrift:"Order,8,required" json:"Order,omitempty"`
 }
 
 func NewGetXHSRequest() *GetXHSRequest {
@@ -49,6 +72,24 @@ type PublishThirdResponse[T any] struct {
 	BaseResp *base.BaseResp `thrift:"BaseResp,255,optional" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
 }
 
+type NoteInfo struct {
+	URL          string
+	LikeCount    string
+	CollectCount string
+	ChatCount    string
+}
+
+type PublishThirdUrl struct {
+	id           int64
+	Introduction string
+	URL          string
+	CreatedAt    int64
+	UpdatedAt    int64
+	Status       int32
+	UrlType      int32
+	CreatorID    int64
+}
+
 func (p *GetXHSRequest) GetPublishType() (v publishThird_commion.PublishThirdType) {
 	//if !p.PublishType() {
 	//	return GetProductListRequest_EntityType_DEFAULT
@@ -59,4 +100,40 @@ func (p *GetXHSRequest) GetPublishType() (v publishThird_commion.PublishThirdTyp
 		return publishThird_commion.PublishThirdType_XSH
 	}
 	return *p.PublishType
+}
+
+func (p *GetTweetXHSRequest) GetTweetInfoType() (v publishThird_commion.TweetType) {
+	//if !p.PublishType() {
+	//	return GetProductListRequest_EntityType_DEFAULT
+	//}
+	//return *p.EntityType
+
+	if p.TweetType == nil {
+		return publishThird_commion.TweetType_XSH
+	}
+	return *p.TweetType
+}
+
+func (p *GetThirdLoginRequest) GetThirdLoginType() (v publishThird_commion.LoginType) {
+	//if !p.PublishType() {
+	//	return GetProductListRequest_EntityType_DEFAULT
+	//}
+	//return *p.EntityType
+
+	if p.LoginType == nil {
+		return publishThird_commion.LoginType_XSH
+	}
+	return *p.LoginType
+}
+
+func (p *GetThirdUrlRequest) GetThirdUrlType() (v publishThird_commion.LoginType) {
+	//if !p.PublishType() {
+	//	return GetProductListRequest_EntityType_DEFAULT
+	//}
+	//return *p.EntityType
+
+	if p.ThirdUrlType == nil {
+		return publishThird_commion.LoginType_XSH
+	}
+	return *p.ThirdUrlType
 }

@@ -24,7 +24,86 @@ import (
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/coze-dev/coze-studio/backend/api/model/publishThird"
 	publishThird_commion "github.com/coze-dev/coze-studio/backend/api/model/publishThird/commion"
+	application "github.com/coze-dev/coze-studio/backend/application/publishThird"
 )
+
+func TweetUrlsByXhs(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req publishThird.GetThirdUrlRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		invalidParamRequestResponse(c, err.Error())
+		return
+	}
+
+	resp := &publishThird.PublishThirdResponse[*publishThird.PublishThirdUrl]{
+		Code:    0,
+		Message: "ok",
+	}
+	switch req.GetThirdUrlType() {
+	case publishThird_commion.LoginType_XSH:
+		//小红书发布逻辑
+		resp, err = application.PublishThirdApplicationSVC.GetTweetUrlList(ctx, &req)
+		if err != nil {
+			internalServerErrorResponse(ctx, c, err)
+			return
+		}
+	}
+	c.JSON(consts.StatusOK, resp)
+}
+
+// 第三方登录
+func LoginToXHS(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req publishThird.GetThirdLoginRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		invalidParamRequestResponse(c, err.Error())
+		return
+	}
+
+	resp := &publishThird.PublishThirdResponse[string]{
+		Code:    0,
+		Message: "ok",
+	}
+	switch req.GetThirdLoginType() {
+	case publishThird_commion.LoginType_XSH:
+		//小红书发布逻辑
+		resp, err = application.PublishThirdApplicationSVC.XhsLogin(ctx)
+		if err != nil {
+			internalServerErrorResponse(ctx, c, err)
+			return
+		}
+	}
+	c.JSON(consts.StatusOK, resp)
+}
+
+// 获取登录二维码
+func GetXhsLoginQr(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req publishThird.GetThirdLoginRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		invalidParamRequestResponse(c, err.Error())
+		return
+	}
+
+	resp := &publishThird.PublishThirdResponse[string]{
+		Code:    0,
+		Message: "ok",
+	}
+
+	switch req.GetThirdLoginType() {
+	case publishThird_commion.LoginType_XSH:
+		//小红书发布逻辑
+		resp, err = application.PublishThirdApplicationSVC.GetXhsLoginQr(ctx)
+		if err != nil {
+			internalServerErrorResponse(ctx, c, err)
+			return
+		}
+	}
+	c.JSON(consts.StatusOK, resp)
+}
 
 // PublishToXHS .
 // @router /api/publish_to_third/publish_to_xhs [POST]
@@ -37,23 +116,41 @@ func PublishToXHS(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	resp := &publishThird.PublishThirdResponse[publishThird.XHSData]{
+	resp := &publishThird.PublishThirdResponse[string]{
 		Code:    0,
 		Message: "ok",
-		Data: publishThird.XHSData{
-			LoginQr:    "...",
-			PublishUrl: "...",
-		},
 	}
 	switch req.GetPublishType() {
 	case publishThird_commion.PublishThirdType_XSH:
 		//小红书发布逻辑
-		//resp, err = publishThird.PluginApplicationSVC.PublicGetProductList(ctx, &req)
-		//if err != nil {
-		//	internalServerErrorResponse(ctx, c, err)
-		//	return
-		//}
+		resp, err = application.PublishThirdApplicationSVC.PublishNote(ctx, req)
+		if err != nil {
+			internalServerErrorResponse(ctx, c, err)
+			return
+		}
 
+	}
+	c.JSON(consts.StatusOK, resp)
+}
+
+func GetTweetInfo(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req publishThird.GetTweetXHSRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		invalidParamRequestResponse(c, err.Error())
+		return
+	}
+
+	resp := &publishThird.PublishThirdResponse[[]publishThird.NoteInfo]{}
+
+	switch req.GetTweetInfoType() {
+	case publishThird_commion.TweetType_XSH:
+		resp, err = application.PublishThirdApplicationSVC.GetTweetInfo(ctx, req)
+		if err != nil {
+			internalServerErrorResponse(ctx, c, err)
+			return
+		}
 	}
 
 	c.JSON(consts.StatusOK, resp)

@@ -14,11 +14,23 @@
  * limitations under the License.
  */
 
-package entiy
+package entity
 
 // PublishImageContent 发布图文内容
 type PublishImageContent struct {
 	Title      string
 	Content    string
 	ImagePaths []string
+}
+
+type WherePublishThirdUrlOption struct {
+	url          *string
+	Introduction *string // Exact match
+	Status       *int32
+	UserID       *int64
+	Query        *string // fuzzy match
+	Page         *int
+	PageSize     *int
+	UrlType      *int32
+	Order        *int32
 }

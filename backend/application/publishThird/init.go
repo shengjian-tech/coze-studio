@@ -17,14 +17,17 @@
 package publishThird
 
 import (
-	"context"
-	"github.com/coze-dev/coze-studio/backend/domain/publishThird/entiy"
+	service "github.com/coze-dev/coze-studio/backend/domain/publishThird/service"
 )
 
-type Publisher interface {
-	/**
-	发布文章
-	*/
-	publishArticle(ctx context.Context, content *entiy.PublishImageContent) (string, error)
-	//查看数据
+type (
+	PublishThird = service.PublishThird
+)
+
+type ServiceComponents = service.ThirdSVCConfig
+
+func InitService(c *ServiceComponents) (*PublishThirdApplicationService, error) {
+	svc := service.NewKnowledgeSVC(c)
+	PublishThirdApplicationSVC.DomainSVC = svc
+	return PublishThirdApplicationSVC, nil
 }

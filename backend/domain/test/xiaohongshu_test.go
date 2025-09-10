@@ -40,7 +40,7 @@ const cookieFile = "cookie.json"
 
 func TestXHP(t *testing.T) {
 	// 启动浏览器
-	browser := newBrowser(false)
+	browser := newBrowser(true)
 	defer browser.MustClose()
 
 	// 打开小红书首页
@@ -100,8 +100,14 @@ func loadCookies(page *rod.Page) bool {
 		return false
 	}
 
+	now := time.Now().Unix() // 当前时间的 Unix 秒数
 	var params []*proto.NetworkCookieParam
 	for _, c := range cookies {
+		// 如果 c.Expires 为 0，说明是会话 cookie，不用判断
+		if c.Expires != 0 && int64(c.Expires) < now {
+			// cookie 已过期，跳过
+			continue
+		}
 		params = append(params, &proto.NetworkCookieParam{
 			Name:    c.Name,
 			Value:   c.Value,
