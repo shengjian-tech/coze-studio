@@ -14,7 +14,7 @@ require (
 	github.com/apache/thrift v0.21.0
 	github.com/bytedance/mockey v1.2.14
 	github.com/bytedance/sonic v1.14.0
-	github.com/cloudwego/eino v0.3.55
+	github.com/cloudwego/eino v0.4.8
 	github.com/cloudwego/eino-ext/components/embedding/ark v0.1.0
 	github.com/cloudwego/eino-ext/components/embedding/gemini v0.0.0-20250814083140-54b99ff82f8e
 	github.com/cloudwego/eino-ext/components/embedding/ollama v0.0.0-20250728060543-79ec300857b8
@@ -61,16 +61,13 @@ require github.com/alicebob/miniredis/v2 v2.34.0
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.84.1
-	github.com/cloudwego/eino-ext/components/embedding/ark v0.1.0
-	github.com/cloudwego/eino-ext/components/embedding/gemini v0.0.0-20250814083140-54b99ff82f8e
-	github.com/cloudwego/eino-ext/components/embedding/ollama v0.0.0-20250728060543-79ec300857b8
-	github.com/cloudwego/eino-ext/components/embedding/openai v0.0.0-20250522060253-ddb617598b09
 	github.com/cloudwego/eino-ext/components/model/gemini v0.1.2
 	github.com/cloudwego/eino-ext/components/model/ollama v0.1.0
 	github.com/cloudwego/eino-ext/components/model/qwen v0.0.0-20250612061754-5a3deb091dc5
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/elastic/go-elasticsearch/v7 v7.17.10
 	github.com/extrame/xls v0.0.1
+	github.com/go-rod/rod v0.116.2
 	github.com/hertz-contrib/cors v0.1.0
 	github.com/jinzhu/copier v0.4.0
 	github.com/mattn/go-shellwords v1.0.12
@@ -309,5 +306,11 @@ require (
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/eino-contrib/jsonschema v1.0.0 // indirect
+	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
+	github.com/ysmood/fetchup v0.2.3 // indirect
+	github.com/ysmood/goob v0.4.0 // indirect
+	github.com/ysmood/got v0.40.0 // indirect
+	github.com/ysmood/gson v0.7.3 // indirect
+	github.com/ysmood/leakless v0.9.0 // indirect
 )
