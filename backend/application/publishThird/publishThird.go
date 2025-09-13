@@ -10,8 +10,6 @@ import (
 	"github.com/coze-dev/coze-studio/backend/api/model/publishThird"
 	"github.com/coze-dev/coze-studio/backend/domain/publishThird/entity"
 	"github.com/coze-dev/coze-studio/backend/domain/publishThird/service"
-	"github.com/coze-dev/coze-studio/backend/infra/contract/cache"
-	"github.com/coze-dev/coze-studio/backend/infra/contract/storage"
 	"github.com/coze-dev/coze-studio/backend/infra/impl/cache/redis"
 	storage1 "github.com/coze-dev/coze-studio/backend/infra/impl/storage"
 	"github.com/coze-dev/coze-studio/backend/pkg/logs"
@@ -34,9 +32,7 @@ import (
 )
 
 type PublishThirdApplicationService struct {
-	DomainSVC   service.PublishThird
-	cacheClient cache.Cmdable
-	Oss         storage.Storage
+	DomainSVC service.PublishThird
 }
 
 var PublishThirdApplicationSVC = &PublishThirdApplicationService{}
@@ -44,7 +40,6 @@ var PublishThirdApplicationSVC = &PublishThirdApplicationService{}
 // 全局变量管理浏览器实例和页面
 var (
 	browserManager *BrowserManager
-	once           sync.Once
 )
 
 // BrowserManager 管理浏览器实例
@@ -82,7 +77,7 @@ type PublishRequest struct {
 const cookieFile = "cookie.json"
 
 // NewBrowserManager 创建浏览器管理器
-func NewBrowserManager() *BrowserManager {
+func NewBrowserManager(ctx context.Context, key string) *BrowserManager {
 	browser := newBrowser(true)
 	page := browser.MustPage("https://www.xiaohongshu.com/")
 	page.MustWaitLoad()
@@ -94,7 +89,7 @@ func NewBrowserManager() *BrowserManager {
 	}
 
 	// 尝试加载已有的 cookie
-	if loadCookies(page) {
+	if loadCookies(ctx, page, key) {
 		bm.isLogin = true
 		log.Println("已加载 cookie，用户已登录")
 	}
@@ -239,7 +234,12 @@ func downloadImage(url, savePath string) (string, error) {
 
 // 发布笔记
 func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req publishThird.GetXHSRequest) (*publishThird.PublishThirdResponse[string], error) {
-	Manager := NewBrowserManager()
+	userID := req.UserId
+	if req.UserId == 0 {
+		userID = int64(123456789)
+	}
+	key := strconv.FormatInt(userID, 10)
+	Manager := NewBrowserManager(ctx, key)
 	resp := publishThird.PublishThirdResponse[string]{
 		Code:    0,
 		Message: "ok",
@@ -255,7 +255,8 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 		}
 
 		// 创建发布动作
-		action, err := NewPublishImageAction(Manager.page)
+		page := Manager.page
+		action, err := NewPublishImageAction(page)
 		if err != nil {
 			slog.Error("创建发布动作失败", "error", err)
 			return &Response{
@@ -340,33 +341,205 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 			}
 		}
 
+		// ===========================
+		// 👉 刷新 → 进入我的 → 点第一篇 → 获取详情 URL
+		// ===========================
+		slog.Info("开始获取最新的推文信息")
+		shouye_err := page.Navigate("https://www.xiaohongshu.com/")
+		if shouye_err != nil {
+			slog.Error("跳转首页失败", "err", err)
+			return &Response{
+				Code: 501,
+				Msg:  "跳转首页失败: " + shouye_err.Error(),
+			}
+		}
+		page.MustSetViewport(1200, 800, 1, false)
+
+		// 刷新页面并等待加载
+		page.MustReload().MustWaitLoad()
+		//加载cookies
+		loadCookies(ctx, page, key)
+
+		// 找到「我的」tab 并点击
+		//page.MustElement("li.user.side-bar-component span.channel").MustClick()
+		myTab := page.MustElement("li.user.side-bar-component span.channel")
+		if myTab == nil {
+			slog.Info("未找到「我的」tab")
+			return &Response{
+				Code: 501,
+				Msg:  "未找到「我」tab",
+			}
+		}
+		//点击wo
+		myTab.MustClick()
+
+		// 等待列表渲染第一篇推文
+		// 定位第一篇笔记
+		note := page.MustElement("section.note-item[data-index='0']")
+		if note == nil {
+			slog.Info("未找到第一篇笔记")
+			return &Response{
+				Code: 501,
+				Msg:  "未找到第一篇笔记",
+			}
+		}
+		// 获取链接
+		cover := note.MustElement("a.cover")
+		if cover == nil {
+			slog.Info("未找到笔记封面链接")
+			return &Response{
+				Code: 501,
+				Msg:  "未找到笔记封面链接",
+			}
+		}
+		hrefProp, href_error := cover.Property("href")
+		if href_error != nil {
+			slog.Info("获取笔记链接失败", "err", href_error)
+			return &Response{
+				Code: 501,
+				Msg:  "获取笔记链接失败: " + href_error.Error(),
+			}
+		}
+		detailURL := hrefProp.String()
+		// 获取标题
+		titleEl, title_error := note.Element("div.footer a.title span")
+		if title_error != nil {
+			slog.Info("未找到笔记标题")
+			return &Response{
+				Code: 501,
+				Msg:  "未找到笔记标题: " + title_error.Error(),
+			}
+		}
+		detailTitle := titleEl.MustText()
+		if detailTitle == "" {
+			slog.Info("获取笔记标题失败")
+			return &Response{
+				Code: 501,
+				Msg:  "获取笔记标题失败",
+			}
+		}
+
+		slog.Info("小红书详情页 URL", "url", detailURL)
+		slog.Info("小红书详情页 标题", "title", detailTitle)
+
+		request := service.ThirdRequest{}
+		value := int64(123456789)
+		request.UserId = &value
+		request.Introduction = &detailTitle
+		request.Url = &detailURL
+		_, response_err := p.DomainSVC.SaveTweetUrl(ctx, &request)
+		if response_err != nil {
+			return &Response{
+				Code: 502,
+				Msg:  "保存到数据库失败: " + response_err.Error(),
+			}
+		}
 		return &Response{
 			Code: 200,
 			Msg:  "发布成功",
 		}
+
 	}
 
 	res := try()
 	if res.Code == 200 {
 		resp.Data = "发布成功"
 		return &resp, nil
+	} else if res.Code == 501 {
+		resp.Code = 1
+		resp.Message = "error"
+		resp.Data = "获取笔记失败"
+		return &resp, nil
+	} else if res.Code == 502 {
+		resp.Code = 1
+		resp.Message = "error"
+		resp.Data = "数据保存到数据库失败"
+		return &resp, nil
 	} else {
+		resp.Code = 1
+		resp.Message = "error"
 		resp.Data = "发布失败"
 		return &resp, nil
 	}
 }
 
-// 获取推文url列表
-func (p *PublishThirdApplicationService) GetTweetUrlList(ctx context.Context, req *publishThird.GetThirdUrlRequest) (*publishThird.PublishThirdResponse[*publishThird.PublishThirdUrl], error) {
-	resp := publishThird.PublishThirdResponse[*publishThird.PublishThirdUrl]{
+// 修改推文url
+func (p *PublishThirdApplicationService) UpdateTweetUrl(ctx context.Context, req *publishThird.GetThirdUrlRequest) (*publishThird.PublishThirdResponse[string], error) {
+	resp := publishThird.PublishThirdResponse[string]{
 		Code:    0,
 		Message: "ok",
 	}
 	request := service.ThirdRequest{}
-	request.UserId = req.UserId
+	request.Id = req.Id
+	request.LikeCount = req.LikeCount
+	request.CollectCount = req.CollectCount
+	request.ChatCount = req.ChatCount
+	response, response_err := p.DomainSVC.UpdateTweetUrlById(ctx, &request)
+	if response_err != nil {
+		resp.Code = 1
+		resp.Message = "error"
+		return &resp, nil
+	}
+	if response.Msg != "ok" {
+		resp.Code = 1
+		resp.Message = response.Msg
+		return &resp, nil
+	}
+	resp.Data = "修改成功"
+	return &resp, nil
+}
+
+// 保存推文url列表
+func (p *PublishThirdApplicationService) SaveTweetUrl(ctx context.Context, req *publishThird.GetThirdUrlRequest) (*publishThird.PublishThirdResponse[string], error) {
+	resp := publishThird.PublishThirdResponse[string]{
+		Code:    0,
+		Message: "ok",
+	}
+	request := service.ThirdRequest{}
+	var userID int64
+	if req.UserId != nil {
+		userID = *req.UserId
+	} else {
+		userID = 123456789
+	}
+	request.UserId = &userID
+	request.Introduction = req.Introduction
+	request.Url = req.Url
+	response, response_err := p.DomainSVC.SaveTweetUrl(ctx, &request)
+	if response_err != nil {
+		resp.Code = 1
+		resp.Message = "error"
+		return &resp, nil
+	}
+	if response.Msg != "ok" {
+		resp.Code = 1
+		resp.Message = response.Msg
+		return &resp, nil
+	}
+	resp.Data = "保存成功"
+	return &resp, nil
+}
+
+// 获取推文url列表
+func (p *PublishThirdApplicationService) GetTweetUrlList(ctx context.Context, req *publishThird.GetThirdUrlRequest) (*publishThird.PublishThirdResponse[[]*publishThird.PublishThirdUrl], error) {
+	resp := publishThird.PublishThirdResponse[[]*publishThird.PublishThirdUrl]{
+		Code:    0,
+		Message: "ok",
+	}
+	request := service.ThirdRequest{}
+	var userID int64
+	if req.UserId != nil {
+		userID = *req.UserId
+	} else {
+		userID = 123456789
+	}
+	request.UserId = &userID
 	request.Order = req.Order
 	request.Status = req.Status
 	request.UrlType = req.UrlType
+	if req.Introduction != nil {
+		request.Introduction = req.Introduction
+	}
 	page := 1
 	pageSize := 10
 	if req.Page != nil && *req.Page > 0 {
@@ -377,18 +550,47 @@ func (p *PublishThirdApplicationService) GetTweetUrlList(ctx context.Context, re
 	}
 	request.Page = &page
 	request.PageSize = &pageSize
-	p.DomainSVC.GetTweetUrlList(ctx, &request)
+	response, response_err := p.DomainSVC.GetTweetUrlList(ctx, &request)
+	if response_err != nil {
+		resp.Code = 1
+		resp.Message = "error"
+		return &resp, nil
+	}
+	list := response.PublishThirdList
+	thirdUrls := []*publishThird.PublishThirdUrl{}
+	for _, item := range list {
+		thirdUrl := publishThird.PublishThirdUrl{}
+		thirdUrl.Id = item.ID
+		thirdUrl.URL = item.Url
+		thirdUrl.UrlType = item.UrlType
+		thirdUrl.Introduction = item.Introduction
+		thirdUrl.Status = item.Status
+		thirdUrl.CreatedAt = item.CreatedAt
+		thirdUrl.UpdatedAt = item.UpdatedAt
+		thirdUrl.CreatorID = item.CreatorID
+		thirdUrl.LikeCount = item.LikeCount
+		thirdUrl.CollectCount = item.CollectCount
+		thirdUrl.ChatCount = item.ChatCount
+		thirdUrls = append(thirdUrls, &thirdUrl)
+	}
+	resp.Data = thirdUrls
+	resp.Total = response.Total
 
 	return &resp, nil
 }
 
 // 小红书登录
-func (p *PublishThirdApplicationService) XhsLogin(ctx context.Context) (*publishThird.PublishThirdResponse[string], error) {
+func (p *PublishThirdApplicationService) XhsLogin(ctx context.Context, req *publishThird.GetThirdLoginRequest) (*publishThird.PublishThirdResponse[string], error) {
 	resp := publishThird.PublishThirdResponse[string]{
 		Code:    0,
 		Message: "ok",
 	}
-	manager := NewBrowserManager()
+	userID := req.UserId
+	if req.UserId == 0 {
+		userID = int64(123456789)
+	}
+	key := strconv.FormatInt(userID, 10)
+	manager := NewBrowserManager(ctx, key)
 	page := manager.page
 
 	// 检查是否已登录
@@ -428,21 +630,28 @@ func (p *PublishThirdApplicationService) XhsLogin(ctx context.Context) (*publish
 		}
 
 		// 用户 ID 示例
-		userID := int64(123456789)
-		key := strconv.FormatInt(userID, 10)
-
 		redisCli := redis.New()
-		if err := redisCli.Set(timeoutCtx, key, qrBase64, 5*time.Minute).Err(); err != nil {
-			logs.CtxErrorf(timeoutCtx, "保存二维码失败: %v", err)
+		if qr_err := redisCli.Set(timeoutCtx, key, qrBase64, 5*time.Minute).Err(); qr_err != nil {
+			logs.CtxErrorf(timeoutCtx, "保存二维码失败: %v", qr_err)
 		}
 
 		// 等待扫码登录，最长 60 秒
 		if waitForLogin(page, 120*time.Second) {
 			logs.CtxInfof(timeoutCtx, "扫码登录成功")
-			if err := redisCli.Set(timeoutCtx, key, "扫码登录成功", 5*time.Minute).Err(); err != nil {
-				logs.CtxErrorf(timeoutCtx, "保存登录成功状态失败: %v", err)
+			if scanqr_err := redisCli.Set(timeoutCtx, key, "扫码登录成功", 5*time.Minute).Err(); scanqr_err != nil {
+				logs.CtxErrorf(timeoutCtx, "保存登录成功状态失败: %v", scanqr_err)
 			}
-			saveCookies(page)
+			//把cookies放在redis里面,有效期24小时
+			//saveCookies(page)
+			cookies, _ := page.Cookies([]string{})
+			data, _ := json.Marshal(cookies)
+			//os.WriteFile(cookieFile, data, 0644)
+			cookie_key := "Cookies" + key
+			if cookies_err := redisCli.Set(timeoutCtx, cookie_key, data, 24*time.Hour).Err(); cookies_err != nil {
+				logs.CtxErrorf(timeoutCtx, "保存cookies失败: %v", cookies_err)
+			} else {
+				log.Println("Cookie 已保存到", cookieFile)
+			}
 		} else {
 			logs.CtxWarnf(timeoutCtx, "扫码登录超时")
 			if err := redisCli.Set(timeoutCtx, key, "扫码登录超时", 5*time.Minute).Err(); err != nil {
@@ -473,6 +682,105 @@ func (p *PublishThirdApplicationService) GetXhsLoginQr(ctx context.Context) (*pu
 	resp.Data = val
 	//获取之后删除
 	cmdable.Del(ctx, str)
+	return &resp, nil
+}
+
+// getInfo 获取点赞量、收藏量、评论量
+func (p *PublishThirdApplicationService) GetTweetInfo(ctx context.Context, req publishThird.GetTweetXHSRequest) (*publishThird.PublishThirdResponse[string], error) {
+	resp := publishThird.PublishThirdResponse[string]{
+		Code:    0,
+		Message: "ok",
+	}
+	userID := req.UserId
+	if req.UserId == 0 {
+		userID = int64(123456789)
+	}
+	key := strconv.FormatInt(userID, 10)
+	manager := NewBrowserManager(ctx, key)
+	if !manager.isLogin {
+		resp.Code = 2
+		resp.Message = "error"
+		resp.Data = "请先登录小红书"
+		return &resp, nil
+	}
+	browser := manager.browser
+	defer browser.MustClose()
+
+	ids := []string{}
+	ids = req.Data
+	if len(ids) == 0 {
+		return &resp, nil
+	}
+	// 使用原来的 ctx，不要重新创建
+	for _, id := range ids {
+		request := service.ThirdRequest{}
+		url_id, err := strconv.ParseInt(id, 10, 64)
+		request.Id = &url_id
+		response, err := p.DomainSVC.GetTweetUrlById(ctx, &request)
+		if err != nil {
+			return nil, err
+		}
+		if response.Code != 0 {
+			return nil, err
+		}
+		ThirdUrl := response.PublishThirdList[0]
+		link := ThirdUrl.Url // 避免闭包捕获
+
+		// 每个页面加载也设置单独超时
+		_, cancel := context.WithTimeout(ctx, 20*time.Second)
+		defer cancel()
+
+		notePage := browser.MustPage(link).
+			Timeout(20 * time.Second).MustWaitLoad()
+
+		var likeCount, collectCount, chatCount string
+
+		// 获取点赞
+		if likeEl := notePage.Timeout(20*time.Second).MustElementR(".like-wrapper .count", `\d|万`); likeEl != nil {
+			likeCount = likeEl.MustText()
+		} else {
+			likeCount = "0"
+		}
+
+		// 获取收藏
+		collectCount = notePage.MustElement(".collect-wrapper .count").MustText()
+
+		if collectCount == "" {
+			collectCount = "0"
+		}
+
+		// 获取评论
+		chatCount = notePage.MustElement(".chat-wrapper .count").MustText()
+		if chatCount == "" {
+			chatCount = "0"
+		}
+
+		log.Printf("链接: %s 点赞:%s 收藏:%s 评论:%s", link, likeCount, collectCount, chatCount)
+		like_Count, like_err := strconv.ParseInt(likeCount, 10, 64)
+		if like_err != nil {
+			like_Count = 0
+		}
+		ThirdUrl.LikeCount = like_Count
+		collect_Count, collect_err := strconv.ParseInt(collectCount, 10, 64)
+		if collect_err != nil {
+			collect_Count = 0
+		}
+		ThirdUrl.CollectCount = collect_Count
+		chat_Count, chat_err := strconv.ParseInt(chatCount, 10, 64)
+		if chat_err != nil {
+			chat_Count = 0
+		}
+		ThirdUrl.ChatCount = chat_Count
+		up_request := service.ThirdUrlRequest{}
+		up_request.PublishThirdUrl = ThirdUrl
+		_, err2 := p.DomainSVC.UpdateTweetUrl(ctx, &up_request)
+		if err2 != nil {
+			resp.Code = 1
+			resp.Message = "error"
+			resp.Data = "获取详细信息失败,请稍后重试"
+			break
+		}
+	}
 	return &resp, nil
 }
 
@@ -524,9 +832,17 @@ func saveCookies(page *rod.Page) {
 }
 
 // loadCookies 加载 Cookie
-func loadCookies(page *rod.Page) bool {
-	data, err := os.ReadFile(cookieFile)
-	if err != nil {
+func loadCookies(ctx context.Context, page *rod.Page, key string) bool {
+	//data, err := os.ReadFile(cookieFile)
+	cookie_key := "Cookies" + key
+	cmdable := redis.New()
+	data, redis_err := cmdable.Get(ctx, cookie_key).Bytes()
+	if redis_err != nil {
+		if redis_err.Error() == "redis: nil" {
+			log.Println("Cookie 已失效", cookieFile)
+			return false
+		}
+		log.Println("获取Cookie失败", cookieFile)
 		return false
 	}
 
@@ -665,81 +981,6 @@ func (p *PublishAction) PublishArticle(ctx context.Context, content *entity.Publ
 
 type ListTweetInfoResponse struct {
 	DateList []*publishThird.NoteInfo `thrift:"dataset_list,1" form:"dataset_list" json:"dataset_list" query:"dataset_list"`
-}
-
-// getInfo 获取点赞量、收藏量、评论量
-func (p *PublishThirdApplicationService) GetTweetInfo(ctx context.Context, req publishThird.GetTweetXHSRequest) (*publishThird.PublishThirdResponse[[]publishThird.NoteInfo], error) {
-	manager := NewBrowserManager()
-	browser := manager.browser
-	defer browser.MustClose()
-
-	links := []string{}
-	links = req.Data
-	resultsCh := make(chan publishThird.NoteInfo, len(links))
-	errCh := make(chan error, len(links))
-
-	// 使用原来的 ctx，不要重新创建
-	for _, link := range links {
-		link := link // 避免闭包捕获
-		go func() {
-			// 每个页面加载也设置单独超时
-			_, cancel := context.WithTimeout(ctx, 20*time.Second)
-			defer cancel()
-
-			notePage := browser.MustPage(link).
-				Timeout(20 * time.Second).MustWaitLoad()
-
-			var likeCount, collectCount, chatCount string
-
-			// 获取点赞
-			if likeEl := notePage.Timeout(20*time.Second).MustElementR(".like-wrapper .count", `\d|万`); likeEl != nil {
-				likeCount = likeEl.MustText()
-			} else {
-				likeCount = "N/A"
-			}
-
-			// 获取收藏
-			collectCount = notePage.MustElement(".collect-wrapper .count").MustText()
-
-			if collectCount == "" {
-				collectCount = "N/A"
-			}
-
-			// 获取评论
-			chatCount = notePage.MustElement(".chat-wrapper .count").MustText()
-			if chatCount == "" {
-				chatCount = "N/A"
-			}
-
-			log.Printf("链接: %s 点赞:%s 收藏:%s 评论:%s", link, likeCount, collectCount, chatCount)
-
-			resultsCh <- publishThird.NoteInfo{
-				URL:          link,
-				LikeCount:    likeCount,
-				CollectCount: collectCount,
-				ChatCount:    chatCount,
-			}
-		}()
-	}
-
-	resp := publishThird.PublishThirdResponse[[]publishThird.NoteInfo]{
-		Code:    0,
-		Message: "ok",
-	}
-	resp.Data = make([]publishThird.NoteInfo, 0)
-	for i := 0; i < len(links); i++ {
-		select {
-		case res := <-resultsCh:
-			resp.Data = append(resp.Data, res)
-		case err := <-errCh:
-			log.Println("抓取错误:", err)
-			// 可以选择继续或直接返回错误，这里继续抓取
-		case <-ctx.Done():
-			return &resp, ctx.Err() // 上下文超时或取消
-		}
-	}
-
-	return &resp, nil
 }
 
 // uploadImages 上传图片

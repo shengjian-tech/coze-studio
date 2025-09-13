@@ -23,17 +23,27 @@ import (
 
 type PublishThird interface {
 
-	//发布文章
-	PublishArticle(ctx context.Context, request *ThirdRequest) (response *ThirdResponse, err error)
+	//保存url信息
+	SaveTweetUrl(ctx context.Context, request *ThirdRequest) (response *ThirdResponse, err error)
 
 	//查看数据
 	GetTweetUrlList(ctx context.Context, request *ThirdRequest) (response *ThirdResponse, err error)
+
+	//修改数据
+	UpdateTweetUrlById(ctx context.Context, request *ThirdRequest) (response *ThirdResponse, err error)
+
+	//根据id查询数据
+	GetTweetUrlById(ctx context.Context, request *ThirdRequest) (response *ThirdResponse, err error)
+
+	//修改数据
+	UpdateTweetUrl(ctx context.Context, request *ThirdUrlRequest) (response *ThirdResponse, err error)
 }
 
 type ThirdResponse struct {
-	msg              string
+	Msg              string
 	PublishThirdList []*model.PublishThirdUrl
 	Total            int64
+	Code             int
 }
 
 type ThirdRequest struct {
@@ -44,4 +54,13 @@ type ThirdRequest struct {
 	Page         *int
 	PageSize     *int
 	Order        *int32
+	Url          *string
+	LikeCount    *int64
+	CollectCount *int64
+	ChatCount    *int64
+	Id           *int64
+}
+
+type ThirdUrlRequest struct {
+	PublishThirdUrl *model.PublishThirdUrl
 }

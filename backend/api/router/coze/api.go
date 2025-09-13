@@ -432,7 +432,9 @@ func Register(r *server.Hertz) {
 			_publishThird.POST("/publish_xhs_tweet", coze.PublishToXHS)
 			_publishThird.POST("/third_login", coze.LoginToXHS)
 			_publishThird.POST("/third_loginQrCode", coze.GetXhsLoginQr)
-			_publishThird.POST("/get_tweet_url", coze.TweetUrlsByXhs)
+			_publishThird.POST("/get_tweet_url", coze.GetTweetUrls)
+			_publishThird.POST("/save_tweet_url", coze.SaveTweetUrls)
+			_publishThird.POST("/update_tweet_url", coze.UpdateTweetUrls)
 		}
 
 	}
@@ -497,7 +499,7 @@ func Register(r *server.Hertz) {
 		_chat.POST("/cancel", append(_cancelchatapiMw(), coze.CancelChatApi)...)
 	}
 	{
-		_vp:=root.Group("/vp",_vpMw()...)
-		_vp.POST("/textToImage",coze.TextToImage)
+		_vp := root.Group("/vp", _vpMw()...)
+		_vp.POST("/textToImage", coze.TextToImage)
 	}
 }

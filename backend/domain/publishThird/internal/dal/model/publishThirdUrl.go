@@ -16,6 +16,9 @@ type PublishThirdUrl struct {
 	Status       int32  `gorm:"column:status;not null;default:1;comment:0 删除, 1 正常" json:"status"`
 	UrlType      int32  `gorm:"column:urlType;not null;default:1;comment:1 小红书" json:"urlType"`
 	CreatorID    int64  `gorm:"column:creator_id;not null;comment:creator id" json:"creator_id"`
+	LikeCount    int64  `gorm:"column:likeCount;not null;comment:点赞量" json:"likeCount"`
+	CollectCount int64  `gorm:"column:collectCount;not null;comment:收藏量" json:"collectCount"`
+	ChatCount    int64  `gorm:"column:chatCount;not null;comment:评论量" json:"chatCount"`
 }
 
 // TableName Knowledge's table name

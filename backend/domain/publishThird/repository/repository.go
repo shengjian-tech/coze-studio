@@ -32,5 +32,7 @@ func NewPublishThirdDAO(db *gorm.DB) PublishThirdRepo {
 //go:generate mockgen -destination ../internal/mock/dal/dao/pubilshThirdUrl.go --package dao -source pubilshThirdUrl.go
 type PublishThirdRepo interface {
 	Create(ctx context.Context, pubilshThirdUrl *model.PublishThirdUrl) error
+	Update(ctx context.Context, pubilshThirdUrl *model.PublishThirdUrl) error
+	GetByID(ctx context.Context, id int64) (*model.PublishThirdUrl, error)
 	FindXhsUrlByList(ctx context.Context, opts *entity.WherePublishThirdUrlOption) ([]*model.PublishThirdUrl, int64, error)
 }

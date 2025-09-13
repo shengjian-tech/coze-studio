@@ -25,7 +25,7 @@ func newPublishThirdUrl(db *gorm.DB, opts ...gen.DOOption) publishThirdUrl {
 	_publishThirdUrl.ALL = field.NewAsterisk(tableName)
 	_publishThirdUrl.ID = field.NewInt64(tableName, "id")
 	_publishThirdUrl.Introduction = field.NewString(tableName, "introduction")
-	_publishThirdUrl.Introduction = field.NewString(tableName, "url")
+	_publishThirdUrl.Url = field.NewString(tableName, "url")
 	_publishThirdUrl.CreatedAt = field.NewInt64(tableName, "created_at")
 	_publishThirdUrl.UpdatedAt = field.NewInt64(tableName, "updated_at")
 	_publishThirdUrl.Status = field.NewInt32(tableName, "status")

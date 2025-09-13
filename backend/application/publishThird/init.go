@@ -27,7 +27,7 @@ type (
 type ServiceComponents = service.ThirdSVCConfig
 
 func InitService(c *ServiceComponents) (*PublishThirdApplicationService, error) {
-	svc := service.NewKnowledgeSVC(c)
+	svc := service.NewPublishThirdSVC(c)
 	PublishThirdApplicationSVC.DomainSVC = svc
 	return PublishThirdApplicationSVC, nil
 }

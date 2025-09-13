@@ -19,7 +19,8 @@ package application
 import (
 	"context"
 	"fmt"
-	"github.com/coze-dev/coze-studio/backend/application/vPlugin/textToImage"
+	"github.com/coze-dev/coze-studio/backend/application/publishThird"
+
 
 	"github.com/coze-dev/coze-studio/backend/application/openauth"
 	"github.com/coze-dev/coze-studio/backend/application/template"
@@ -81,27 +82,29 @@ type eventbusImpl struct {
 }
 
 type basicServices struct {
-	infra        *appinfra.AppDependencies
-	eventbus     *eventbusImpl
-	modelMgrSVC  *modelmgr.ModelmgrApplicationService
-	connectorSVC *connector.ConnectorApplicationService
-	userSVC      *user.UserApplicationService
-	promptSVC    *prompt.PromptApplicationService
-	templateSVC  *template.ApplicationService
-	openAuthSVC  *openauth.OpenAuthApplicationService
-	uploadSVC    *upload.UploadService
-	ttImgSVC     *textToImage.TextToImageApplicationService
+	infra                      *appinfra.AppDependencies
+	eventbus                   *eventbusImpl
+	modelMgrSVC                *modelmgr.ModelmgrApplicationService
+	connectorSVC               *connector.ConnectorApplicationService
+	userSVC                    *user.UserApplicationService
+	promptSVC                  *prompt.PromptApplicationService
+	templateSVC                *template.ApplicationService
+	openAuthSVC                *openauth.OpenAuthApplicationService
+	uploadSVC                  *upload.UploadService
+	PublishThirdApplicationSVC *publishThird.PublishThirdApplicationService
+	ttImgSVC                   *textToImage.TextToImageApplicationService
 }
 
 type primaryServices struct {
 	basicServices *basicServices
 	infra         *appinfra.AppDependencies
 
-	pluginSVC    *plugin.PluginApplicationService
-	memorySVC    *memory.MemoryApplicationServices
-	knowledgeSVC *knowledge.KnowledgeApplicationService
-	workflowSVC  *workflow.ApplicationService
-	shortcutSVC  *shortcutcmd.ShortcutCmdApplicationService
+	pluginSVC                  *plugin.PluginApplicationService
+	memorySVC                  *memory.MemoryApplicationServices
+	knowledgeSVC               *knowledge.KnowledgeApplicationService
+	workflowSVC                *workflow.ApplicationService
+	shortcutSVC                *shortcutcmd.ShortcutCmdApplicationService
+	publishThirdApplicationSVC *publishThird.PublishThirdApplicationService
 }
 
 type complexServices struct {
@@ -209,6 +212,11 @@ func initPrimaryServices(ctx context.Context, basicServices *basicServices) (*pr
 		return nil, err
 	}
 
+	publishThirdApplicationSVC, err := publishThird.InitService(basicServices.toPublishThirdComponents())
+	if err != nil {
+		return nil, err
+	}
+
 	workflowDomainSVC, err := workflow.InitService(ctx,
 		basicServices.toWorkflowServiceComponents(pluginSVC, memorySVC, knowledgeSVC))
 	if err != nil {
@@ -218,13 +226,14 @@ func initPrimaryServices(ctx context.Context, basicServices *basicServices) (*pr
 	shortcutSVC := shortcutcmd.InitService(basicServices.infra.DB, basicServices.infra.IDGenSVC)
 
 	return &primaryServices{
-		basicServices: basicServices,
-		pluginSVC:     pluginSVC,
-		memorySVC:     memorySVC,
-		knowledgeSVC:  knowledgeSVC,
-		workflowSVC:   workflowDomainSVC,
-		shortcutSVC:   shortcutSVC,
-		infra:         basicServices.infra,
+		basicServices:              basicServices,
+		pluginSVC:                  pluginSVC,
+		memorySVC:                  memorySVC,
+		knowledgeSVC:               knowledgeSVC,
+		workflowSVC:                workflowDomainSVC,
+		shortcutSVC:                shortcutSVC,
+		infra:                      basicServices.infra,
+		publishThirdApplicationSVC: publishThirdApplicationSVC,
 	}, nil
 }
 
@@ -381,4 +390,9 @@ func (p *primaryServices) toConversationComponents(singleAgentSVC *singleagent.S
 		ImageX:               infra.ImageXClient,
 		SingleAgentDomainSVC: singleAgentSVC.DomainSVC,
 	}
+}
+
+func (b *basicServices) toPublishThirdComponents() *publishThird.ServiceComponents {
+
+	return &publishThird.ServiceComponents{DB: b.infra.DB}
 }

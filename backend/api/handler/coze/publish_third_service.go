@@ -27,7 +27,7 @@ import (
 	application "github.com/coze-dev/coze-studio/backend/application/publishThird"
 )
 
-func TweetUrlsByXhs(ctx context.Context, c *app.RequestContext) {
+func UpdateTweetUrls(ctx context.Context, c *app.RequestContext) {
 	var err error
 	var req publishThird.GetThirdUrlRequest
 	err = c.BindAndValidate(&req)
@@ -36,7 +36,77 @@ func TweetUrlsByXhs(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	resp := &publishThird.PublishThirdResponse[*publishThird.PublishThirdUrl]{
+	resp := &publishThird.PublishThirdResponse[string]{
+		Code:    0,
+		Message: "ok",
+	}
+	switch req.GetThirdUrlType() {
+	case publishThird_commion.LoginType_XSH:
+		//小红书发布逻辑
+		if req.LikeCount == nil {
+			invalidParamRequestResponse(c, "LikeCount is nil")
+		}
+		if req.CollectCount == nil {
+			invalidParamRequestResponse(c, "CollectCount is nil")
+		}
+		if req.ChatCount == nil {
+			invalidParamRequestResponse(c, "ChatCount is nil")
+		}
+		if req.Id == nil {
+			invalidParamRequestResponse(c, "id is nil")
+		}
+
+		resp, err = application.PublishThirdApplicationSVC.UpdateTweetUrl(ctx, &req)
+		if err != nil {
+			internalServerErrorResponse(ctx, c, err)
+			return
+		}
+	}
+	c.JSON(consts.StatusOK, resp)
+}
+
+func SaveTweetUrls(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req publishThird.GetThirdUrlRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		invalidParamRequestResponse(c, err.Error())
+		return
+	}
+
+	resp := &publishThird.PublishThirdResponse[string]{
+		Code:    0,
+		Message: "ok",
+	}
+	switch req.GetThirdUrlType() {
+	case publishThird_commion.LoginType_XSH:
+		//小红书发布逻辑
+		if req.Url == nil {
+			invalidParamRequestResponse(c, "url is nil")
+		}
+		if req.Introduction == nil {
+			invalidParamRequestResponse(c, "introduction is nil")
+		}
+
+		resp, err = application.PublishThirdApplicationSVC.SaveTweetUrl(ctx, &req)
+		if err != nil {
+			internalServerErrorResponse(ctx, c, err)
+			return
+		}
+	}
+	c.JSON(consts.StatusOK, resp)
+}
+
+func GetTweetUrls(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req publishThird.GetThirdUrlRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		invalidParamRequestResponse(c, err.Error())
+		return
+	}
+
+	resp := &publishThird.PublishThirdResponse[[]*publishThird.PublishThirdUrl]{
 		Code:    0,
 		Message: "ok",
 	}
@@ -69,7 +139,7 @@ func LoginToXHS(ctx context.Context, c *app.RequestContext) {
 	switch req.GetThirdLoginType() {
 	case publishThird_commion.LoginType_XSH:
 		//小红书发布逻辑
-		resp, err = application.PublishThirdApplicationSVC.XhsLogin(ctx)
+		resp, err = application.PublishThirdApplicationSVC.XhsLogin(ctx, &req)
 		if err != nil {
 			internalServerErrorResponse(ctx, c, err)
 			return
@@ -133,6 +203,7 @@ func PublishToXHS(ctx context.Context, c *app.RequestContext) {
 	c.JSON(consts.StatusOK, resp)
 }
 
+// 刷新获取信息
 func GetTweetInfo(ctx context.Context, c *app.RequestContext) {
 	var err error
 	var req publishThird.GetTweetXHSRequest
@@ -142,7 +213,7 @@ func GetTweetInfo(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	resp := &publishThird.PublishThirdResponse[[]publishThird.NoteInfo]{}
+	resp := &publishThird.PublishThirdResponse[string]{}
 
 	switch req.GetTweetInfoType() {
 	case publishThird_commion.TweetType_XSH:
