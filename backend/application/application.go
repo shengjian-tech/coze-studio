@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/coze-dev/coze-studio/backend/application/publishThird"
-
+	"github.com/coze-dev/coze-studio/backend/application/vPlugin/textToImage"
 
 	"github.com/coze-dev/coze-studio/backend/application/openauth"
 	"github.com/coze-dev/coze-studio/backend/application/template"
