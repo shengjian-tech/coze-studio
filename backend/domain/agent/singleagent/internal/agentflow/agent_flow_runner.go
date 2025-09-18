@@ -19,13 +19,11 @@ package agentflow
 import (
 	"context"
 	"errors"
-	"io"
-	"slices"
-
-	"github.com/google/uuid"
-
 	"github.com/cloudwego/eino/compose"
 	"github.com/cloudwego/eino/schema"
+	"github.com/google/uuid"
+	"io"
+	"slices"
 
 	"github.com/coze-dev/coze-studio/backend/api/model/crossdomain/agentrun"
 	"github.com/coze-dev/coze-studio/backend/api/model/crossdomain/singleagent"

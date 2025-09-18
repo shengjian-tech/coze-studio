@@ -1623,4 +1623,39 @@ INSERT INTO workflow_draft (id, canvas, input_params, output_params, test_run_su
     ON DUPLICATE KEY UPDATE
     id = VALUES(id);
 
+-- Create 'publish_third_url' table
+DROP TABLE IF EXISTS `publish_third_url`;
+CREATE TABLE `publish_third_url`  (
+  `id` bigint(0) NOT NULL AUTO_INCREMENT COMMENT 'id',
+  `introduction` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '链接介绍',
+  `url` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT 'url',
+  `created_at` bigint(0) NOT NULL COMMENT 'Create Time in Milliseconds',
+  `updated_at` bigint(0) NOT NULL COMMENT 'Update Time in Milliseconds',
+  `status` int(0) NOT NULL DEFAULT 1 COMMENT '0 删除, 1 正常',
+  `urlType` int(0) NOT NULL DEFAULT 1 COMMENT '1 小红书',
+  `creator_id` bigint(0) NOT NULL COMMENT 'creator_id用户id',
+  `likeCount` bigint(0) NULL DEFAULT NULL COMMENT '点赞量',
+  `collectCount` bigint(0) NULL DEFAULT NULL COMMENT '收藏量',
+  `chatCount` bigint(0) NULL DEFAULT NULL COMMENT '评论量',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 7550963274724933633 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'Publish Third Url' ROW_FORMAT = Dynamic;
 
+-- ----------------------------
+-- Records of publish_third_url
+-- ----------------------------
+INSERT INTO `publish_third_url` VALUES (7538241907546128385, '感觉十分的nice', 'https://www.xiaohongshu.com/explore/68c071a3000000001d000852?xsec_token=ABk-kftyCjaQ01AltO_gblykambaAaNasa97WFVlpfqNY=&xsec_source=pc_feed', 1757467585291, 1757467585291, 1, 1, 123456789, 0, 0, 0);
+INSERT INTO `publish_third_url` VALUES (7538241907546128386, 'iPhone17定价与配置清单！', 'https://www.xiaohongshu.com/explore/68c0c0e7000000001d02546e?xsec_token=ABk-kftyCjaQ01AltO_gblyuLiIN-KF60mJmhmQkgqz8U=&xsec_source=pc_feed', 1757467585291, 1757467585291, 1, 1, 123456789, 0, 0, 0);
+INSERT INTO `publish_third_url` VALUES (7538241907546128387, '精准的气枪射击表现', 'https://www.xiaohongshu.com/explore/68bd93d0000000001d0381bf?xsec_token=ABG2awU001zKeUm2L2G394VO9MOsQijas9UlKNbXYB3zM=&xsec_source=pc_feed', 1757467585291, 1757467585291, 1, 1, 123456789, 0, 0, 0);
+INSERT INTO `publish_third_url` VALUES (7549044058572718080, '春夏秋冬', 'https://www.xiaohongshu.com/user/profile/65640e71000000000202b078/68c39610000000001c00bc6d?xsec_token=ABGj8lfzVGx7lMAILCwULBAUTpXVW6mtMT9_wc_0XLNAQ=&xsec_source=pc_user', 1757648787132, 1757648787132, 1, 1, 123456789, 0, 0, 0);
+INSERT INTO `publish_third_url` VALUES (7549046034857459712, '郑州双休五险一金', 'https://www.xiaohongshu.com/explore/68c1059a000000001c03156e?xsec_token=ABYt41ytjdHi6V4kCiLgcRDlMtEqf2K-7cQk9sgJgpfLs=&xsec_source=', 1757649247275, 1757664062, 1, 1, 123456789, 1, 36, 120);
+INSERT INTO `publish_third_url` VALUES (7549071766891528192, '春夏秋冬999 ', 'https://www.xiaohongshu.com/user/profile/65640e71000000000202b078/68c3b0be000000001c012cb8?xsec_token=ABGj8lfzVGx7lMAILCwULBAbPhDN7AzIusmzldsNc-V8o=&xsec_source=pc_user', 1757655238486, 1757655238486, 1, 1, 123456789, 0, 0, 0);
+INSERT INTO `publish_third_url` VALUES (7549106207697403904, '新手父母必看：200字育儿速成指南', 'https://www.xiaohongshu.com/user/profile/65640e71000000000202b078/68c3d012000000001b0350b5?xsec_token=ABGj8lfzVGx7lMAILCwULBAbNH-LNXKelaUVP9TMKPRqI=&xsec_source=pc_user', 1757663257358, 1757730875, 1, 1, 123456789, 2, 0, 1);
+INSERT INTO `publish_third_url` VALUES (7549107450209632256, '清冷破碎感的神,湿漉漉的清透玫瑰眼妆!', 'https://www.xiaohongshu.com/explore/68a6a239000000001d01b824?xsec_token=ABbPkegdkBsY03JEtcccppFKvI4KPp52Ictvx5ztniF-Y=&xsec_source=pc_feed', 1757663546660, 1757730871, 1, 1, 123456789, 2, 281, 17);
+INSERT INTO `publish_third_url` VALUES (7549142365831692288, '居家了吗', 'https://www.xiaohongshu.com/explore/68c240d5000000001c037be7?xsec_token=ABHK3fRqGKvC_E0XTxJd96V0XqAm3HefHhkC4ENd7DSyA=&xsec_source=pc_feed', 1757671676073, 1757671676073, 1, 1, 123456, 0, 0, 0);
+INSERT INTO `publish_third_url` VALUES (7549142648670388224, '居家了吗', 'https://www.xiaohongshu.com/explore/68c240d5000000001c037be7?xsec_token=ABHK3fRqGKvC_E0XTxJd96V0XqAm3HefHhkC4ENd7DSyA=&xsec_source=pc_feed', 1757671741947, 1757730869, 1, 1, 123456789, 5, 6, 0);
+INSERT INTO `publish_third_url` VALUES (7549147614936039424, '郑州旅游攻略', 'https://www.xiaohongshu.com/user/profile/6728cde0000000001c01b032/68c3f5ba000000001b03322b?xsec_token=ABgKT-isg2ADn4sj19E_Ku-_3HQBYPKHsKEHKv2llojBg=&xsec_source=pc_user', 1757672898229, 1757730861, 1, 1, 123456789, 1, 0, 1);
+INSERT INTO `publish_third_url` VALUES (7550959715442753536, '标题：宝子们！以太坊要开升级狂欢啦！🎉', 'https://www.xiaohongshu.com/user/profile/64902ec40000000012037337/68ca65d2000000000b03e9b3?xsec_token=ABgtzbTpATXf5447YFrK5bmqf2flplHrOct3FCrzjny10=&xsec_source=pc_user', 1758094810768, 1758094810768, 1, 1, 123456789, 0, 0, 0);
+INSERT INTO `publish_third_url` VALUES (7550961650816253952, '宝子们👋！今天咱们来唠唠这个超火的Web3技术，简直yyds！✨', 'https://www.xiaohongshu.com/user/profile/64902ec40000000012037337/68ca6794000000001101d488?xsec_token=ABgtzbTpATXf5447YFrK5bmkX_vB6MTq0s30rJfpucdX0=&xsec_source=pc_user', 1758095261374, 1758095261374, 1, 1, 123456789, 0, 0, 0);
+INSERT INTO `publish_third_url` VALUES (7550963274724933632, '宝子们👋！今天咱们来唠唠这个超火的Web3技术，简直yyds！✨', 'https://www.xiaohongshu.com/user/profile/64902ec40000000012037337/68ca6910000000000e023eed?xsec_token=ABgtzbTpATXf5447YFrK5bmkSb_vkzokDU1AWGpbuoQQE=&xsec_source=pc_user', 1758095639472, 1758095639472, 1, 1, 123456789, 0, 0, 0);
+
+SET FOREIGN_KEY_CHECKS = 1;
