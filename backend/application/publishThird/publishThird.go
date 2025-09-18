@@ -94,7 +94,7 @@ const cookieFile = "cookie.json"
 
 // NewBrowserManager 创建浏览器管理器
 func NewBrowserManager(ctx context.Context, key string) (*BrowserManager, *launcher.Launcher) {
-	browser, l := newBrowser(false)
+	browser, l := newBrowser(true)
 	page := browser.MustPage("https://www.xiaohongshu.com/")
 	page.MustWaitLoad()
 
@@ -863,7 +863,7 @@ func resetBrowser(ctx context.Context, c *app.RequestContext) {
 		}
 
 		// 重新创建浏览器实例
-		browser, l := newBrowser(false)
+		browser, l := newBrowser(true)
 		page := browser.MustPage("https://www.xiaohongshu.com/")
 		page.MustWaitLoad()
 
