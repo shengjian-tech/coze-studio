@@ -4611,6 +4611,89 @@ table "workflow_version" {
     columns = [column.workflow_id, column.version]
   }
 }
+table "publish_third_url" {
+  schema   = schema.opencoze
+  engine   = "InnoDB"
+  comment  = "Publish Third Url"
+  row_format = "Dynamic"
+
+  column "id" {
+    type           = "bigint"
+    null           = false
+    auto_increment = true
+    comment        = "id"
+  }
+
+  column "introduction" {
+    type    = "varchar(255)"
+    null    = false
+    charset = "utf8mb4"
+    collate = "utf8mb4_0900_ai_ci"
+    comment = "链接介绍"
+  }
+
+  column "url" {
+    type    = "varchar(512)"
+    null    = true
+    charset = "utf8mb4"
+    collate = "utf8mb4_0900_ai_ci"
+    comment = "url"
+  }
+
+  column "created_at" {
+    type    = "bigint"
+    null    = false
+    comment = "Create Time in Milliseconds"
+  }
+
+  column "updated_at" {
+    type    = "bigint"
+    null    = false
+    comment = "Update Time in Milliseconds"
+  }
+
+  column "status" {
+    type    = "int"
+    null    = false
+    default = 1
+    comment = "0 删除, 1 正常"
+  }
+
+  column "urlType" {
+    type    = "int"
+    null    = false
+    default = 1
+    comment = "1 小红书"
+  }
+
+  column "creator_id" {
+    type    = "bigint"
+    null    = false
+    comment = "creator_id用户id"
+  }
+
+  column "likeCount" {
+    type    = "bigint"
+    null    = true
+    comment = "点赞量"
+  }
+
+  column "collectCount" {
+    type    = "bigint"
+    null    = true
+    comment = "收藏量"
+  }
+
+  column "chatCount" {
+    type    = "bigint"
+    null    = true
+    comment = "评论量"
+  }
+
+  primary_key {
+    columns = [column.id]
+  }
+}
 schema "opencoze" {
   charset = "utf8mb4"
   collate = "utf8mb4_unicode_ci"
