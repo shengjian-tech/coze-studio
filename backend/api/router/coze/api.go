@@ -500,6 +500,7 @@ func Register(r *server.Hertz) {
 	}
 	{
 		_vp := root.Group("/vp", _vpMw()...)
-		_vp.POST("/textToImage", coze.TextToImage)
+		_vp.POST("/textToImage", coze.TextToImage)     //文生图
+		_vp.POST("/sens_word_dete", coze.SensWordDete) //敏感词检测
 	}
 }

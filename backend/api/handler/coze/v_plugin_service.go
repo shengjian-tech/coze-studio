@@ -20,6 +20,7 @@ import (
 	"context"
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
+	"github.com/coze-dev/coze-studio/backend/application/vPlugin/sensWordDete"
 	"github.com/coze-dev/coze-studio/backend/application/vPlugin/textToImage"
 )
 
@@ -42,4 +43,26 @@ func TextToImage(ctx context.Context, c *app.RequestContext) {
 	}
 
 	c.JSON(consts.StatusOK, resp)
+}
+
+// 敏感词检测接口
+// SensWordDete .
+// @router /vp/sens_word_dete [POST]
+func SensWordDete(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req sensWordDete.SensWordDeteRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		invalidParamRequestResponse(c, err.Error())
+		return
+	}
+
+	resp, err := sensWordDete.SensWordApplicationSVC.DeteSensWord(ctx, &req)
+	if err != nil {
+		invalidParamRequestResponse(c, err.Error())
+		return
+	}
+
+	c.JSON(consts.StatusOK, resp)
+
 }

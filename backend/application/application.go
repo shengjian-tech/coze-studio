@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/coze-dev/coze-studio/backend/application/publishThird"
+	"github.com/coze-dev/coze-studio/backend/application/vPlugin"
 	"github.com/coze-dev/coze-studio/backend/application/vPlugin/textToImage"
 
 	"github.com/coze-dev/coze-studio/backend/application/openauth"
@@ -181,6 +182,8 @@ func initBasicServices(ctx context.Context, infra *appinfra.AppDependencies, e *
 	})
 	//wen生图
 	ttImgSVC := textToImage.InitService(ctx, infra.TextToImage)
+	//插件
+	vPlugin.InitService(ctx, infra.CacheCli)
 
 	return &basicServices{
 		infra:        infra,

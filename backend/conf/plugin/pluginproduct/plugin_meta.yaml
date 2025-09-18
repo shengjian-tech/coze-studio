@@ -935,3 +935,31 @@
       deprecated: false
       method: post
       sub_url: /vp/textToImage
+- plugin_id: 25
+  product_id: 7328314516272463926
+  deprecated: false
+  version: v1.0.0
+  openapi_doc_file: sens_word_dete.yaml
+  plugin_type: 1
+  manifest:
+    schema_version: v1
+    name_for_model: mingancijiance
+    name_for_human: 敏感词检测
+    description_for_model: 检测文段中是否有平台禁止出现的敏感词或者如涉黄，暴力，政治敏感等违禁词
+    description_for_human: 检测文段中是否有平台禁止出现的敏感词或者如涉黄，暴力，政治敏感等违禁词
+    auth:
+      type: none
+      # service token apply to https://127.0.0.1:8888/
+    logo_url: official_plugin_icon/plugin_wolfram_alpha.png
+    api:
+      type: openapi
+    common_params:
+      body: [ ]
+      header: [ ]
+      path: [ ]
+      query: [ ]
+  tools:
+    - tool_id: 40001014
+      deprecated: false
+      method: post
+      sub_url: /vp/sens_word_dete

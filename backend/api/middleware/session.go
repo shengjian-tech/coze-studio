@@ -41,6 +41,7 @@ var noNeedSessionCheckPath = map[string]bool{
 	"/api/publishThird/third_loginQrCode":  true,
 	"/api/publishThird/get_tweet_url":      true,
 	"/vp/textToImage":                      true,
+	"/vp/sens_word_dete":                   true,
 	"/api/publishThird/save_tweet_url":     true,
 	"/api/publishThird/update_tweet_url":   true,
 }

@@ -29,6 +29,12 @@ RUN apk add --no-cache pax-utils python3 python3-dev bind-tools file deno curl
 
 RUN deno run -A jsr:@eyurtsev/pyodide-sandbox -c "print('Hello, World')"
 
+# 安装 Chromium 及依赖（用于小红书爬虫）
+RUN apk add --no-cache chromium nss freetype harfbuzz ca-certificates ttf-freefont
+
+# 设置 go-rod 使用系统 Chromium
+ENV ROD_BROWSER_PATH=/usr/bin/chromium-browser
+
 # Install Python build dependencies, create venv, install packages, then remove build deps
 RUN apk add --no-cache --virtual .python-build-deps build-base py3-pip git && \
     python3 -m venv --copies --upgrade-deps /app/.venv && \

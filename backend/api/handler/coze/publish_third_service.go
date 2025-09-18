@@ -123,6 +123,7 @@ func GetTweetUrls(ctx context.Context, c *app.RequestContext) {
 }
 
 // 第三方登录
+// api/publishThird/third_login
 func LoginToXHS(ctx context.Context, c *app.RequestContext) {
 	var err error
 	var req publishThird.GetThirdLoginRequest

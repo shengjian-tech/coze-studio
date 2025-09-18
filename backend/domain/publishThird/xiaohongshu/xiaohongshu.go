@@ -78,10 +78,10 @@ const cookieFile = "cookie.json"
 
 // NewBrowserManager 创建浏览器管理器
 func NewBrowserManager() *BrowserManager {
-	browser := newBrowser(false)
+	browser, l := newBrowser(false)
 	page := browser.MustPage("https://www.xiaohongshu.com/")
 	page.MustWaitLoad()
-
+	defer l.Kill()
 	bm := &BrowserManager{
 		browser: browser,
 		page:    page,
@@ -230,7 +230,6 @@ func publishNote(ctx context.Context, c *app.RequestContext) {
 // 重置浏览器
 func resetBrowser(ctx context.Context, c *app.RequestContext) {
 	browserManager.mu.Lock()
-	defer browserManager.mu.Unlock()
 
 	try := func() *Response {
 		// 关闭当前浏览器
@@ -239,10 +238,11 @@ func resetBrowser(ctx context.Context, c *app.RequestContext) {
 		}
 
 		// 重新创建浏览器实例
-		browser := newBrowser(false)
+		browser, l := newBrowser(false)
 		page := browser.MustPage("https://www.xiaohongshu.com/")
 		page.MustWaitLoad()
-
+		defer l.Kill()
+		defer browserManager.mu.Unlock()
 		browserManager.browser = browser
 		browserManager.page = page
 		browserManager.isLogin = false
@@ -260,10 +260,20 @@ func resetBrowser(ctx context.Context, c *app.RequestContext) {
 // ---------- 原有功能函数适配 ----------
 
 // newBrowser 启动浏览器
-func newBrowser(headless bool) *rod.Browser {
-	l := launcher.New().Headless(headless).MustLaunch()
-	browser := rod.New().ControlURL(l).MustConnect()
-	return browser
+func newBrowser(headless bool) (*rod.Browser, *launcher.Launcher) {
+	l := launcher.New().Headless(headless)
+	rodPath := os.Getenv("ROD_BROWSER_PATH")
+	var ll string
+	if rodPath != "" {
+		ll = l.NoSandbox(true).Bin(rodPath).MustLaunch()
+	} else {
+		ll = l.NoSandbox(true).MustLaunch()
+	}
+	//ll = l.NoSandbox(true).Bin(os.Getenv("ROD_BROWSER_PATH")).MustLaunch()
+	//l := launcher.New().Headless(headless).NoSandbox(true).MustLaunch()
+	defer l.Kill() //确保释放资源
+	browser := rod.New().ControlURL(ll).MustConnect()
+	return browser, l
 }
 
 // saveCookies 保存 Cookie
@@ -406,7 +416,8 @@ type NoteInfo struct {
 
 // getInfo 获取点赞量、收藏量、评论量
 func (p *PublishAction) getTweetInfo(ctx context.Context, links []string) ([]NoteInfo, error) {
-	browser := newBrowser(true)
+	browser, l := newBrowser(true)
+	defer l.Kill()
 	defer browser.MustClose()
 
 	resultsCh := make(chan NoteInfo, len(links))

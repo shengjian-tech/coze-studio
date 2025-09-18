@@ -1,3 +1,19 @@
+/*
+ * Copyright 2025 coze-dev Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package publishThird
 
 import (
@@ -77,8 +93,8 @@ type PublishRequest struct {
 const cookieFile = "cookie.json"
 
 // NewBrowserManager 创建浏览器管理器
-func NewBrowserManager(ctx context.Context, key string) *BrowserManager {
-	browser := newBrowser(true)
+func NewBrowserManager(ctx context.Context, key string) (*BrowserManager, *launcher.Launcher) {
+	browser, l := newBrowser(false)
 	page := browser.MustPage("https://www.xiaohongshu.com/")
 	page.MustWaitLoad()
 
@@ -94,7 +110,7 @@ func NewBrowserManager(ctx context.Context, key string) *BrowserManager {
 		log.Println("已加载 cookie，用户已登录")
 	}
 
-	return bm
+	return bm, l
 }
 
 // 获取二维码
@@ -239,7 +255,8 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 		userID = int64(123456789)
 	}
 	key := strconv.FormatInt(userID, 10)
-	Manager := NewBrowserManager(ctx, key)
+	Manager, l := NewBrowserManager(ctx, key)
+
 	resp := publishThird.PublishThirdResponse[string]{
 		Code:    0,
 		Message: "ok",
@@ -345,6 +362,9 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 		// 👉 刷新 → 进入我的 → 点第一篇 → 获取详情 URL
 		// ===========================
 		slog.Info("开始获取最新的推文信息")
+
+		time.Sleep(2 * time.Second)
+		// 导航到首页并等待加载完成
 		shouye_err := page.Navigate("https://www.xiaohongshu.com/")
 		if shouye_err != nil {
 			slog.Error("跳转首页失败", "err", err)
@@ -353,16 +373,26 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 				Msg:  "跳转首页失败: " + shouye_err.Error(),
 			}
 		}
+
+		// 等待页面加载完成
+		page.MustWaitLoad()
+		slog.Info("获取首页.......")
+		// 设置视口大小
 		page.MustSetViewport(1200, 800, 1, false)
+
+		// 添加短暂延时确保页面稳定
+		time.Sleep(2 * time.Second)
 
 		// 刷新页面并等待加载
 		page.MustReload().MustWaitLoad()
+
 		//加载cookies
 		loadCookies(ctx, page, key)
 
 		// 找到「我的」tab 并点击
 		//page.MustElement("li.user.side-bar-component span.channel").MustClick()
 		myTab := page.MustElement("li.user.side-bar-component span.channel")
+
 		if myTab == nil {
 			slog.Info("未找到「我的」tab")
 			return &Response{
@@ -373,9 +403,27 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 		//点击wo
 		myTab.MustClick()
 
+		// 等待页面导航到用户页面
+		page.MustWaitLoad()
+		time.Sleep(5 * time.Second) // 等待内容加载
+
 		// 等待列表渲染第一篇推文
-		// 定位第一篇笔记
-		note := page.MustElement("section.note-item[data-index='0']")
+		// 定位第一篇笔记，设置超时时间避免无限等待
+		slog.Info("开始查找第一篇笔记...")
+		note, err := page.Timeout(10 * time.Minute).Element("section.note-item[data-index='0']")
+		if err != nil {
+			slog.Error("查找第一篇笔记超时", "error", err)
+			// 尝试其他选择器
+			note, err = page.Timeout(5 * time.Second).Element("section.note-item")
+			if err != nil {
+				slog.Error("使用备用选择器也未找到笔记", "error", err)
+				return &Response{
+					Code: 501,
+					Msg:  "未找到第一篇笔记: " + err.Error(),
+				}
+			}
+		}
+
 		if note == nil {
 			slog.Info("未找到第一篇笔记")
 			return &Response{
@@ -384,15 +432,17 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 			}
 		}
 		// 获取链接
-		cover := note.MustElement("a.cover")
-		if cover == nil {
-			slog.Info("未找到笔记封面链接")
+		cover, err := note.Timeout(5 * time.Second).Element("a.cover")
+
+		if err != nil || cover == nil {
+			slog.Info("未找到笔记封面链接", "error", err)
 			return &Response{
 				Code: 501,
 				Msg:  "未找到笔记封面链接",
 			}
 		}
 		hrefProp, href_error := cover.Property("href")
+
 		if href_error != nil {
 			slog.Info("获取笔记链接失败", "err", href_error)
 			return &Response{
@@ -401,8 +451,10 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 			}
 		}
 		detailURL := hrefProp.String()
+
 		// 获取标题
 		titleEl, title_error := note.Element("div.footer a.title span")
+
 		if title_error != nil {
 			slog.Info("未找到笔记标题")
 			return &Response{
@@ -411,6 +463,7 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 			}
 		}
 		detailTitle := titleEl.MustText()
+
 		if detailTitle == "" {
 			slog.Info("获取笔记标题失败")
 			return &Response{
@@ -442,6 +495,12 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 	}
 
 	res := try()
+
+	// 在 try 函数执行完成后释放资源
+	if l != nil {
+		l.Kill()
+	}
+
 	if res.Code == 200 {
 		resp.Data = "发布成功"
 		return &resp, nil
@@ -590,11 +649,14 @@ func (p *PublishThirdApplicationService) XhsLogin(ctx context.Context, req *publ
 		userID = int64(123456789)
 	}
 	key := strconv.FormatInt(userID, 10)
-	manager := NewBrowserManager(ctx, key)
+	manager, l := NewBrowserManager(ctx, key)
 	page := manager.page
 
 	// 检查是否已登录
 	if checkLoginStatus(page) {
+		if l != nil {
+			l.Kill() //释放资源
+		}
 		resp.Code = 0
 		resp.Message = "已登录"
 		return &resp, nil
@@ -608,9 +670,14 @@ func (p *PublishThirdApplicationService) XhsLogin(ctx context.Context, req *publ
 	safego.Go(context.Background(), func() {
 		// 独立上下文，360秒超时
 		timeoutCtx, cancel := context.WithTimeout(context.Background(), 360*time.Second)
+
 		defer cancel()
 
 		defer func() {
+			fmt.Printf("执行结束。。。。。")
+			if l != nil {
+				l.Kill()
+			}
 			if r := recover(); r != nil {
 				logs.CtxErrorf(timeoutCtx, "扫码 goroutine panic: %v", r)
 			}
@@ -696,7 +763,7 @@ func (p *PublishThirdApplicationService) GetTweetInfo(ctx context.Context, req p
 		userID = int64(123456789)
 	}
 	key := strconv.FormatInt(userID, 10)
-	manager := NewBrowserManager(ctx, key)
+	manager, l := NewBrowserManager(ctx, key)
 	if !manager.isLogin {
 		resp.Code = 2
 		resp.Message = "error"
@@ -704,6 +771,7 @@ func (p *PublishThirdApplicationService) GetTweetInfo(ctx context.Context, req p
 		return &resp, nil
 	}
 	browser := manager.browser
+	defer l.Kill() //确保资源释放
 	defer browser.MustClose()
 
 	ids := []string{}
@@ -787,7 +855,6 @@ func (p *PublishThirdApplicationService) GetTweetInfo(ctx context.Context, req p
 // 重置浏览器
 func resetBrowser(ctx context.Context, c *app.RequestContext) {
 	browserManager.mu.Lock()
-	defer browserManager.mu.Unlock()
 
 	try := func() *Response {
 		// 关闭当前浏览器
@@ -796,14 +863,15 @@ func resetBrowser(ctx context.Context, c *app.RequestContext) {
 		}
 
 		// 重新创建浏览器实例
-		browser := newBrowser(false)
+		browser, l := newBrowser(false)
 		page := browser.MustPage("https://www.xiaohongshu.com/")
 		page.MustWaitLoad()
 
 		browserManager.browser = browser
 		browserManager.page = page
 		browserManager.isLogin = false
-
+		defer l.Kill()
+		defer browserManager.mu.Unlock()
 		return &Response{
 			Code: 200,
 			Msg:  "浏览器重置成功",
@@ -817,10 +885,21 @@ func resetBrowser(ctx context.Context, c *app.RequestContext) {
 // ---------- 原有功能函数适配 ----------
 
 // newBrowser 启动浏览器
-func newBrowser(headless bool) *rod.Browser {
-	l := launcher.New().Headless(headless).NoSandbox(true).MustLaunch()
-	browser := rod.New().ControlURL(l).MustConnect()
-	return browser
+func newBrowser(headless bool) (*rod.Browser, *launcher.Launcher) {
+	l := launcher.New().Headless(headless)
+	rodPath := os.Getenv("ROD_BROWSER_PATH")
+	var ll string
+	if rodPath != "" {
+		ll = l.NoSandbox(true).Bin(rodPath).MustLaunch()
+	} else {
+		ll = l.NoSandbox(true).MustLaunch()
+	}
+	//ll = l.NoSandbox(true).Bin(os.Getenv("ROD_BROWSER_PATH")).MustLaunch()
+	//l := launcher.New().Headless(headless).NoSandbox(true).MustLaunch()
+	//defer l.Kill() //确保释放资源
+	browser := rod.New().ControlURL(ll).MustConnect()
+
+	return browser, l
 }
 
 // saveCookies 保存 Cookie
