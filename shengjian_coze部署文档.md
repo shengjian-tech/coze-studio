@@ -3,3 +3,5 @@
 1.windows上打包完毕后，上传至服务器项目根路径/frontend/apps/coze-studio/dist
 
 2.执行dockerfile即可
+
+飞书权限补充，上传文件到云空间：drive:file
