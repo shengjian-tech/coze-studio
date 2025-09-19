@@ -26,21 +26,21 @@ import (
 	"github.com/coze-dev/coze-studio/backend/api/model/publishThird"
 	"github.com/coze-dev/coze-studio/backend/domain/publishThird/entity"
 	"github.com/coze-dev/coze-studio/backend/domain/publishThird/service"
+	"github.com/coze-dev/coze-studio/backend/infra/contract/storage"
 	"github.com/coze-dev/coze-studio/backend/infra/impl/cache/redis"
-	storage1 "github.com/coze-dev/coze-studio/backend/infra/impl/storage"
 	"github.com/coze-dev/coze-studio/backend/pkg/logs"
 	"github.com/coze-dev/coze-studio/backend/pkg/safego"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
-	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"io"
-	"io/ioutil"
 	"log"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"sync"
@@ -49,6 +49,7 @@ import (
 
 type PublishThirdApplicationService struct {
 	DomainSVC service.PublishThird
+	storage   storage.Storage
 }
 
 var PublishThirdApplicationSVC = &PublishThirdApplicationService{}
@@ -205,21 +206,6 @@ func waitForLogin(page *rod.Page, timeout time.Duration) bool {
 	}
 }
 
-func getContent(url string) ([]byte, error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("bad status: %s", resp.Status)
-	}
-
-	// 读取到 []byte
-	return ioutil.ReadAll(resp.Body)
-}
-
 func downloadImage(url, savePath string) (string, error) {
 	// 发送 GET 请求
 	resp, err := http.Get(url)
@@ -273,6 +259,7 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 
 		// 创建发布动作
 		page := Manager.page
+		time.Sleep(1 * time.Second)
 		action, err := NewPublishImageAction(page)
 		if err != nil {
 			slog.Error("创建发布动作失败", "error", err)
@@ -296,53 +283,27 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 		paths := req.ImagePaths
 		if paths != nil && len(paths) > 0 {
 			Images := []string{}
-			s, init_err := storage1.New(ctx)
-			if init_err != nil {
-				return &Response{
-					Code: 500,
-					Msg:  "初始化storage失败: " + err.Error(),
-				}
-			}
-			for index, path := range paths {
-				fmt.Printf("Index: %d, Path: %s\n", index, path)
-				//先存到minio里面
-				bytes, bytes_err := getContent(path)
-				if bytes_err != nil {
-					slog.Error("图片获取失败", "error", err)
-					return &Response{
-						Code: 500,
-						Msg:  "图片获取失败: " + err.Error(),
-					}
-				}
-				objKey := "xhs"
-				newString := uuid.NewString() + ".jpg"
-				objectName := fmt.Sprintf("%s/%s", objKey, newString)
-				upload_err := s.PutObject(ctx, objectName, bytes)
-				if upload_err != nil {
-					return &Response{
-						Code: 500,
-						Msg:  "图片获取失败: " + err.Error(),
-					}
-				}
-				_, getUrl_err := s.GetObjectUrl(ctx, objectName)
-				if getUrl_err != nil {
-					return &Response{
-						Code: 500,
-						Msg:  "图片获取失败: " + err.Error(),
-					}
-				}
 
-				saveDir := "./static/xhs/"
+			for index, path_ := range paths {
+				fmt.Printf("Index: %d, Path: %s\n", index, path_)
+
+				u, _ := url.Parse(path_)
+				filename := path.Base(u.Path)
+
+				saveDir := os.Getenv("STATIC_XHS_DIR")
+				if saveDir == "" {
+					saveDir = "./static/xhs/"
+				}
 				// 确保目录存在
 				if err := os.MkdirAll(saveDir, 0755); err != nil {
 					panic(err)
 				}
-				savePath := saveDir + newString
-				image, local_image_err := downloadImage(path, savePath)
+				savePath := saveDir + filename
+				image, local_image_err := downloadImage(path_, savePath)
 				if local_image_err != nil {
 					return &Response{
 						Code: 500,
-						Msg:  "本地保存失败: " + err.Error(),
+						Msg:  "本地保存失败: " + local_image_err.Error(),
 					}
 				}
 				Images = append(Images, image)

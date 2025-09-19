@@ -14,21 +14,6 @@
  * limitations under the License.
  */
 
-package publishThird
+package textToImage
 
-import (
-	service "github.com/coze-dev/coze-studio/backend/domain/publishThird/service"
-)
-
-type (
-	PublishThird = service.PublishThird
-)
-
-type ServiceComponents = service.ThirdSVCConfig
-
-func InitService(c *ServiceComponents) (*PublishThirdApplicationService, error) {
-	svc := service.NewPublishThirdSVC(c)
-	PublishThirdApplicationSVC.DomainSVC = svc
-	PublishThirdApplicationSVC.storage = c.Storage
-	return PublishThirdApplicationSVC, nil
-}
+const TextToImagePrefix = "textToImage"

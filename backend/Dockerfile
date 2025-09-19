@@ -6,12 +6,21 @@ WORKDIR /app
 # Install build dependencies for Go
 RUN apk add --no-cache git gcc libc-dev
 
+# Configure Go proxy and timeouts
+ENV GOPROXY=https://goproxy.cn,https://proxy.golang.org,direct
+ENV GOSUMDB=sum.golang.org
+ENV GOTIMEOUT=600s
+ENV GO111MODULE=on
+
+
 # Copy go.mod and go.sum first to leverage Docker cache
 COPY backend/go.mod backend/go.sum ./
 RUN go mod download
 
 # Copy the entire backend source code
 COPY backend/ ./
+
+RUN go mod tidy
 
 # Build the Go application
 RUN go build -ldflags="-s -w" -o /app/opencoze main.go

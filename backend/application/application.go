@@ -181,7 +181,7 @@ func initBasicServices(ctx context.Context, infra *appinfra.AppDependencies, e *
 		Storage: infra.TOSClient,
 	})
 	//wen生图
-	ttImgSVC := textToImage.InitService(ctx, infra.TextToImage)
+	ttImgSVC := textToImage.InitService(ctx, infra.TextToImage, infra.TOSClient)
 	//插件
 	vPlugin.InitService(ctx, infra.CacheCli)
 
@@ -397,5 +397,5 @@ func (p *primaryServices) toConversationComponents(singleAgentSVC *singleagent.S
 
 func (b *basicServices) toPublishThirdComponents() *publishThird.ServiceComponents {
 
-	return &publishThird.ServiceComponents{DB: b.infra.DB}
+	return &publishThird.ServiceComponents{DB: b.infra.DB, Storage: b.infra.TOSClient}
 }
