@@ -3917,6 +3917,12 @@ table "user" {
     unsigned = true
     comment  = "Deletion Time (Milliseconds)"
   }
+ column "mobile" {
+    null    = true
+    type    = varchar(20)
+    default = ""
+    comment = "phone number（带区号）"
+  }
   primary_key {
     columns = [column.id]
   }
