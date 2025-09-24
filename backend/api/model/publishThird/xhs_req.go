@@ -29,18 +29,18 @@ type GetXHSRequest struct {
 	Title        string                                 `thrift:"Title,3,required" json:"Title,required"`
 	Content      string                                 `thrift:"Content,4,required" json:"Content,required"`
 	ImagePaths   []string                               `thrift:"ImagePaths,5,optional" json:"ImagePaths,omitempty"`
-	UserId       int64                                  `thrift:"UserId,6,optional" json:"UserId,omitempty"`
+	UserId       string                                 `thrift:"UserId,6,optional" json:"UserId,omitempty"`
 }
 
 type GetTweetXHSRequest struct {
 	TweetType *publishThird_commion.TweetType `thrift:"TweetType,1,optional" json:"TweetType,omitempty"`
 	Data      []string                        `thrift:"Data,2,required" json:"Data,omitempty"`
-	UserId    int64                           `thrift:"UserId,3,optional" json:"UserId,omitempty"`
+	UserId    string                          `thrift:"UserId,3,optional" json:"UserId,omitempty"`
 }
 
 type GetThirdLoginRequest struct {
 	LoginType *publishThird_commion.LoginType `thrift:"LoginType,1,required" json:"LoginType,omitempty"`
-	UserId    int64                           `thrift:"UserId,6,optional" json:"UserId,omitempty"`
+	UserId    string                          `thrift:"UserId,6,optional" json:"UserId,omitempty"`
 }
 
 type GetThirdUrlRequest struct {
