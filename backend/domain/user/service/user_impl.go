@@ -25,6 +25,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/coze-dev/coze-studio/backend/infra/contract/cache"
+	"github.com/coze-dev/coze-studio/backend/infra/contract/thirdParty"
 	"strconv"
 	"strings"
 	"time"
@@ -52,6 +54,8 @@ type Components struct {
 	IDGen     idgen.IDGenerator
 	UserRepo  repository.UserRepository
 	SpaceRepo repository.SpaceRepository
+	FeiShuCli thirdParty.Lark
+	Cache     cache.Cmdable
 }
 
 func NewUserDomain(ctx context.Context, c *Components) User {
@@ -660,4 +664,168 @@ func userPo2Do(model *model.User, iconURL string) *userEntity.User {
 		CreatedAt:    model.CreatedAt,
 		UpdatedAt:    model.UpdatedAt,
 	}
+}
+
+// 飞书登录
+func (u *userImpl) FeishuLogin(ctx context.Context, code string) (user *userEntity.User, error error) {
+	//TODO implement me
+	//获取user_access_token
+	token, err := u.FeiShuCli.GetUserAccessToken(ctx, code)
+	if err != nil {
+
+		return nil, err
+	}
+	//获取用户信息
+
+	info, err := u.FeiShuCli.GetUserInfo(ctx, token.AccessToken)
+	if err != nil {
+		return nil, err
+	}
+	infoData := info.Data
+	userOpenId := *infoData.OpenId //将 openid作为userId
+	//user_access_token放入缓存
+	u.Cache.Set(ctx, RFeiShuUserAccessToken+userOpenId, token.AccessToken, 110*time.Minute) //user_access_token,过期时间1小时50分钟后
+	u.Cache.Set(ctx, RFeiShuUserRefreshToken+userOpenId, token.RefreshToken, 720*time.Hour) //过期时间30天
+	openid, _ := strconv.ParseInt(userOpenId, 10, 64)
+	return &userEntity.User{
+		UserID: openid,
+	}, nil
+	//查看该用户是否存在不存在则注册
+
+	//if infoData.Mobile == nil {
+	//	return nil, fmt.Errorf("获取用户手机号失败，请应用开通权限获取用户手机号")
+	//
+	//}
+	//usermodel, b, err := u.UserRepo.GetUsersByMobile(ctx, *infoData.Mobile)
+	//if !b {
+	//	locale := string(i18n.GetLocale(ctx))
+	//	//注册这个用户，这样不需要维护两个sessionKey
+	//	user, err = u.CreateByMobile(ctx, &CreateUserRequest{
+	//		//Password
+	//		//Name
+	//		//UniqueName
+	//		//Description string
+	//		//SpaceID     int64
+	//		//Locale      string
+	//		//Mobile      string
+	//		Password:    "123456",
+	//		Name:        *infoData.Mobile,
+	//		UniqueName:  *infoData.Mobile,
+	//		Description: "",
+	//		SpaceID:     0,
+	//		Mobile:      *infoData.Mobile,
+	//		Locale:      locale,
+	//	})
+	//	if err != nil {
+	//		if err != nil {
+	//			return nil, fmt.Errorf("insert user failed: %w", err)
+	//		}
+	//	}
+	//	return user, nil
+	//
+	//}
+	//resURL, err := u.IconOSS.GetObjectUrl(ctx, usermodel.IconURI)
+	//return userPo2Do(usermodel, resURL), err
+}
+
+func (u *userImpl) CreateByMobile(ctx context.Context, req *CreateUserRequest) (user *userEntity.User, err error) {
+	//exist, err := u.UserRepo.CheckEmailExist(ctx, req.Email)
+	//if err != nil {
+	//	return nil, err
+	//}
+
+	//if exist {
+	//	return nil, errorx.New(errno.ErrUserEmailAlreadyExistCode, errorx.KV("email", req.Email))
+	//}
+
+	if req.UniqueName != "" {
+		exist, err := u.UserRepo.CheckUniqueNameExist(ctx, req.UniqueName)
+		if err != nil {
+			return nil, err
+		}
+		if exist {
+			return nil, errorx.New(errno.ErrUserUniqueNameAlreadyExistCode, errorx.KV("name", req.UniqueName))
+		}
+	}
+
+	// Hashing passwords using the Argon2id algorithm
+	hashedPassword, err := hashPassword(req.Password)
+	if err != nil {
+		return nil, err
+	}
+
+	name := req.Name
+	if name == "" {
+		name = req.Mobile
+	}
+
+	userID, err := u.IDGen.GenID(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("generate id error: %w", err)
+	}
+
+	now := time.Now().UnixMilli()
+
+	spaceID := req.SpaceID
+	if spaceID <= 0 {
+		var sid int64
+		sid, err = u.IDGen.GenID(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("gen space_id failed: %w", err)
+		}
+
+		err = u.SpaceRepo.CreateSpace(ctx, &model.Space{
+			ID:          sid,
+			Name:        "Personal Space",
+			Description: "This is your personal space",
+			IconURI:     uploadEntity.EnterpriseIconURI,
+			OwnerID:     userID,
+			CreatorID:   userID,
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("create personal space failed: %w", err)
+		}
+
+		spaceID = sid
+	}
+
+	newUser := &model.User{
+		ID:           userID,
+		IconURI:      uploadEntity.UserIconURI,
+		Name:         name,
+		UniqueName:   req.Mobile,
+		Mobile:       req.Mobile,
+		Password:     hashedPassword,
+		Description:  req.Description,
+		UserVerified: false,
+		Locale:       req.Locale,
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	}
+
+	err = u.UserRepo.CreateUser(ctx, newUser)
+	if err != nil {
+		return nil, fmt.Errorf("insert user failed: %w", err)
+	}
+
+	err = u.SpaceRepo.AddSpaceUser(ctx, &model.SpaceUser{
+		SpaceID:   spaceID,
+		UserID:    userID,
+		RoleType:  1,
+		CreatedAt: now,
+		UpdatedAt: now,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("add space user failed: %w", err)
+	}
+
+	iconURL, err := u.IconOSS.GetObjectUrl(ctx, newUser.IconURI)
+	if err != nil {
+		return nil, fmt.Errorf("get icon url failed: %w", err)
+	}
+
+	return userPo2Do(newUser, iconURL), nil
+
 }

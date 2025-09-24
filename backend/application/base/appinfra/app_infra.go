@@ -21,8 +21,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/coze-dev/coze-studio/backend/infra/contract/document/textToImage"
+	"github.com/coze-dev/coze-studio/backend/infra/contract/thirdParty"
 	"github.com/coze-dev/coze-studio/backend/infra/impl/document/textToImage/openaiTextToImage"
 	"github.com/coze-dev/coze-studio/backend/infra/impl/document/textToImage/qwenTextToImage"
+	"github.com/coze-dev/coze-studio/backend/infra/impl/thirdParty/feishu"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -105,6 +107,7 @@ type AppDependencies struct {
 	NL2SQL                   nl2sql.NL2SQL
 	WorkflowBuildInChatModel chatmodel.BaseChatModel
 	TextToImage              textToImage.TextToImg
+	FeiShuCli                thirdParty.Lark
 }
 
 func Init(ctx context.Context) (*AppDependencies, error) {
@@ -121,6 +124,9 @@ func Init(ctx context.Context) (*AppDependencies, error) {
 	}
 
 	deps.CacheCli = redis.New()
+
+	//feishu
+	deps.FeiShuCli = feishu.NewClient()
 
 	deps.IDGenSVC, err = idgen.New(deps.CacheCli)
 	if err != nil {

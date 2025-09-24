@@ -70,6 +70,7 @@ require (
 	github.com/go-rod/rod v0.116.2
 	github.com/hertz-contrib/cors v0.1.0
 	github.com/jinzhu/copier v0.4.0
+	github.com/larksuite/oapi-sdk-go/v3 v3.4.25
 	github.com/mattn/go-shellwords v1.0.12
 	github.com/nsqio/go-nsq v1.1.0
 	github.com/ollama/ollama v0.9.6
@@ -93,7 +94,7 @@ require (
 	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
 	github.com/extrame/ole2 v0.0.0-20160812065207-d69429661ad7 // indirect
 	github.com/frankban/quicktest v1.14.6 // indirect
-	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
+	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/google/btree v1.1.2 // indirect
 	github.com/google/s2a-go v0.1.8 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.4 // indirect

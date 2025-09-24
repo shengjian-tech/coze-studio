@@ -43,9 +43,11 @@ type UserRepository interface {
 	CheckUniqueNameExist(ctx context.Context, uniqueName string) (bool, error)
 	UpdateProfile(ctx context.Context, userID int64, updates map[string]any) error
 	CheckEmailExist(ctx context.Context, email string) (bool, error)
+	CheckMobileExist(ctx context.Context, mobile string) (bool, error)
 	CreateUser(ctx context.Context, user *model.User) error
 	GetUserBySessionKey(ctx context.Context, sessionKey string) (*model.User, bool, error)
 	GetUsersByIDs(ctx context.Context, userIDs []int64) ([]*model.User, error)
+	GetUsersByMobile(ctx context.Context, mobile string) (*model.User, bool, error)
 }
 
 type SpaceRepository interface {

@@ -97,6 +97,7 @@ func SaveTweetUrls(ctx context.Context, c *app.RequestContext) {
 	c.JSON(consts.StatusOK, resp)
 }
 
+// 发布之后的url
 func GetTweetUrls(ctx context.Context, c *app.RequestContext) {
 	var err error
 	var req publishThird.GetThirdUrlRequest
@@ -150,6 +151,7 @@ func LoginToXHS(ctx context.Context, c *app.RequestContext) {
 }
 
 // 获取登录二维码
+// /publishThird/third_loginQrCode
 func GetXhsLoginQr(ctx context.Context, c *app.RequestContext) {
 	var err error
 	var req publishThird.GetThirdLoginRequest
@@ -167,7 +169,7 @@ func GetXhsLoginQr(ctx context.Context, c *app.RequestContext) {
 	switch req.GetThirdLoginType() {
 	case publishThird_commion.LoginType_XSH:
 		//小红书发布逻辑
-		resp, err = application.PublishThirdApplicationSVC.GetXhsLoginQr(ctx)
+		resp, err = application.PublishThirdApplicationSVC.GetXhsLoginQr(ctx, &req)
 		if err != nil {
 			internalServerErrorResponse(ctx, c, err)
 			return

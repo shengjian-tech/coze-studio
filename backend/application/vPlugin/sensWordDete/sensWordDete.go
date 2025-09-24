@@ -270,9 +270,7 @@ func (s *SensWordApplicationService) loginingKeChaCi(ctx context.Context) (bool,
 	}
 	//保存cookie
 	cookies := do.Cookies()
-	for i, cookie := range cookies {
-		fmt.Printf("循环 123：%v,%v ", i, cookie)
-	}
+
 	ckJson, err1 := json.Marshal(cookies)
 
 	s.baseService.Cache.Set(ctx, vPlugin.LingKeCookie, ckJson, 168*time.Hour) //7天

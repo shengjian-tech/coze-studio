@@ -339,3 +339,28 @@ func userDo2PlaygroundTo(userDo *entity.User) *playground.UserBasicInfo {
 		CreateTime:     ptr.Of(userDo.CreatedAt / 1000),
 	}
 }
+
+func (u *UserApplicationService) PassportFeishuLoginPost(ctx context.Context, p *passport.PassportFeiShuLoginPostRequest) (*passport.PassportWebEmailRegisterV2PostResponse, string, error) {
+	//获取app
+	code := p.Code
+	if code == "" {
+		return &passport.PassportWebEmailRegisterV2PostResponse{
+			Code: 500,
+			Msg:  "code is null",
+			Data: nil,
+		}, "", nil
+	}
+	userInfo, err := u.DomainSVC.FeishuLogin(ctx, code)
+	if err != nil {
+		return &passport.PassportWebEmailRegisterV2PostResponse{
+			Code: 500,
+			Msg:  "get user info failed",
+			Data: nil,
+		}, "", err
+	}
+	return &passport.PassportWebEmailRegisterV2PostResponse{
+		Data: userDo2PassportTo(userInfo),
+		Code: 0,
+		Msg:  "ok",
+	}, userInfo.SessionKey, nil
+}

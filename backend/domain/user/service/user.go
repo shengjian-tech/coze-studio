@@ -18,7 +18,6 @@ package service
 
 import (
 	"context"
-
 	"github.com/coze-dev/coze-studio/backend/domain/user/entity"
 )
 
@@ -43,6 +42,8 @@ const (
 	UniqueNameTooShortOrTooLong ValidateProfileUpdateResult = 3
 	EmailExist                  ValidateProfileUpdateResult = 5
 )
+const RFeiShuUserAccessToken = "feishu:user:token:"
+const RFeiShuUserRefreshToken = "user:refresh:"
 
 type ValidateProfileUpdateResponse struct {
 	Code ValidateProfileUpdateResult
@@ -57,6 +58,7 @@ type CreateUserRequest struct {
 	Description string
 	SpaceID     int64
 	Locale      string
+	Mobile      string
 }
 
 type CreateUserResponse struct {
@@ -77,4 +79,5 @@ type User interface {
 	MGetUserProfiles(ctx context.Context, userIDs []int64) (users []*entity.User, err error)
 	ValidateSession(ctx context.Context, sessionKey string) (session *entity.Session, exist bool, err error)
 	GetUserSpaceList(ctx context.Context, userID int64) (spaces []*entity.Space, err error)
+	FeishuLogin(ctx context.Context, code string) (user *entity.User, error error)
 }

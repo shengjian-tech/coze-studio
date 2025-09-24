@@ -22,6 +22,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -217,4 +218,44 @@ func UserUpdateProfile(ctx context.Context, c *app.RequestContext) {
 	}
 
 	c.JSON(http.StatusOK, resp)
+}
+
+// 获取appid
+func GetFeishuAppId(ctx context.Context, c *app.RequestContext) {
+
+	var resp passport.PassportFeiShuLoginAppidResponse
+	appid := os.Getenv("FEISHU_APP_ID")
+	resp.Data = appid
+	resp.Msg = "ok"
+	c.JSON(http.StatusOK, resp)
+}
+
+// PassportFeishuLoginPost .
+// @router /passport/feishu/login [POST]
+func PassportFeishuLoginPost(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req passport.PassportFeiShuLoginPostRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(http.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp, sessionKey, err := user.UserApplicationSVC.PassportFeishuLoginPost(ctx, &req)
+	//web 登录的sessionkey是一个uuid
+	if err != nil {
+		internalServerErrorResponse(ctx, c, err)
+		return
+	}
+
+	logs.Infof("[PassportFeishuLoginPost] sessionKey: %s", sessionKey)
+
+	c.SetCookie(entity.SessionKey,
+		sessionKey,
+		consts.SessionMaxAgeSecond,
+		"/", domain.GetOriginHost(c),
+		protocol.CookieSameSiteDefaultMode,
+		false, true)
+	c.JSON(http.StatusOK, resp)
+
 }

@@ -236,6 +236,10 @@ func Register(r *server.Hertz) {
 				}
 			}
 			{
+				_passport.POST("/feishu/login", coze.PassportFeishuLoginPost)
+				_passport.GET("/feishu/appid", coze.GetFeishuAppId)
+			}
+			{
 				_web := _passport.Group("/web", _webMw()...)
 				{
 					_email := _web.Group("/email", _emailMw()...)

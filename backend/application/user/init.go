@@ -18,7 +18,8 @@ package user
 
 import (
 	"context"
-
+	"github.com/coze-dev/coze-studio/backend/infra/contract/cache"
+	"github.com/coze-dev/coze-studio/backend/infra/contract/thirdParty"
 	"gorm.io/gorm"
 
 	"github.com/coze-dev/coze-studio/backend/domain/user/repository"
@@ -27,10 +28,12 @@ import (
 	"github.com/coze-dev/coze-studio/backend/infra/impl/idgen"
 )
 
-func InitService(ctx context.Context, db *gorm.DB, oss storage.Storage, idgen idgen.IDGenerator) *UserApplicationService {
+func InitService(ctx context.Context, db *gorm.DB, oss storage.Storage, idgen idgen.IDGenerator, cli thirdParty.Lark, cache cache.Cmdable) *UserApplicationService {
 	UserApplicationSVC.DomainSVC = service.NewUserDomain(ctx, &service.Components{
 		IconOSS:   oss,
 		IDGen:     idgen,
+		FeiShuCli: cli,
+		Cache:     cache,
 		UserRepo:  repository.NewUserRepo(db),
 		SpaceRepo: repository.NewSpaceRepo(db),
 	})

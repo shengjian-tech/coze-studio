@@ -44,6 +44,8 @@ var noNeedSessionCheckPath = map[string]bool{
 	"/vp/sens_word_dete":                   true,
 	"/api/publishThird/save_tweet_url":     true,
 	"/api/publishThird/update_tweet_url":   true,
+	"/api/passport/feishu/login":           true,
+	"/api/passport/feishu/appid":           true,
 }
 
 func SessionAuthMW() app.HandlerFunc {

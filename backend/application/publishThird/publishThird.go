@@ -28,8 +28,10 @@ import (
 	"github.com/coze-dev/coze-studio/backend/domain/publishThird/service"
 	"github.com/coze-dev/coze-studio/backend/infra/contract/storage"
 	"github.com/coze-dev/coze-studio/backend/infra/impl/cache/redis"
+	"github.com/coze-dev/coze-studio/backend/pkg/errorx"
 	"github.com/coze-dev/coze-studio/backend/pkg/logs"
 	"github.com/coze-dev/coze-studio/backend/pkg/safego"
+	"github.com/coze-dev/coze-studio/backend/types/errno"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
@@ -237,11 +239,11 @@ func downloadImage(url, savePath string) (string, error) {
 // 发布笔记
 func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req publishThird.GetXHSRequest) (*publishThird.PublishThirdResponse[string], error) {
 	userID := req.UserId
-	if req.UserId == 0 {
-		userID = int64(123456789)
+	if req.UserId == "" {
+		return nil, errorx.New(errno.ErrUserAuthenticationFailed, errorx.KV("reason", "missing session_key in cookie"))
 	}
-	key := strconv.FormatInt(userID, 10)
-	Manager, l := NewBrowserManager(ctx, key)
+
+	Manager, l := NewBrowserManager(ctx, userID)
 
 	resp := publishThird.PublishThirdResponse[string]{
 		Code:    0,
@@ -348,7 +350,7 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 		page.MustReload().MustWaitLoad()
 
 		//加载cookies
-		loadCookies(ctx, page, key)
+		loadCookies(ctx, page, userID)
 
 		// 找到「我的」tab 并点击
 		//page.MustElement("li.user.side-bar-component span.channel").MustClick()
@@ -437,8 +439,6 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 		slog.Info("小红书详情页 标题", "title", detailTitle)
 
 		request := service.ThirdRequest{}
-		value := int64(123456789)
-		request.UserId = &value
 		request.Introduction = &detailTitle
 		request.Url = &detailURL
 		_, response_err := p.DomainSVC.SaveTweetUrl(ctx, &request)
@@ -520,7 +520,7 @@ func (p *PublishThirdApplicationService) SaveTweetUrl(ctx context.Context, req *
 	if req.UserId != nil {
 		userID = *req.UserId
 	} else {
-		userID = 123456789
+		return nil, errorx.New(errno.ErrUserAuthenticationFailed, errorx.KV("reason", "missing session_key in cookie"))
 	}
 	request.UserId = &userID
 	request.Introduction = req.Introduction
@@ -551,7 +551,7 @@ func (p *PublishThirdApplicationService) GetTweetUrlList(ctx context.Context, re
 	if req.UserId != nil {
 		userID = *req.UserId
 	} else {
-		userID = 123456789
+		return nil, errorx.New(errno.ErrUserAuthenticationFailed, errorx.KV("reason", "missing session_key in cookie"))
 	}
 	request.UserId = &userID
 	request.Order = req.Order
@@ -606,11 +606,11 @@ func (p *PublishThirdApplicationService) XhsLogin(ctx context.Context, req *publ
 		Message: "ok",
 	}
 	userID := req.UserId
-	if req.UserId == 0 {
-		userID = int64(123456789)
+	if req.UserId == "" {
+		return nil, errorx.New(errno.ErrUserAuthenticationFailed, errorx.KV("reason", "missing session_key in cookie"))
 	}
-	key := strconv.FormatInt(userID, 10)
-	manager, l := NewBrowserManager(ctx, key)
+
+	manager, l := NewBrowserManager(ctx, userID)
 	page := manager.page
 
 	// 检查是否已登录
@@ -659,14 +659,14 @@ func (p *PublishThirdApplicationService) XhsLogin(ctx context.Context, req *publ
 
 		// 用户 ID 示例
 		redisCli := redis.New()
-		if qr_err := redisCli.Set(timeoutCtx, key, qrBase64, 5*time.Minute).Err(); qr_err != nil {
+		if qr_err := redisCli.Set(timeoutCtx, userID, qrBase64, 5*time.Minute).Err(); qr_err != nil {
 			logs.CtxErrorf(timeoutCtx, "保存二维码失败: %v", qr_err)
 		}
 
 		// 等待扫码登录，最长 60 秒
 		if waitForLogin(page, 120*time.Second) {
 			logs.CtxInfof(timeoutCtx, "扫码登录成功")
-			if scanqr_err := redisCli.Set(timeoutCtx, key, "扫码登录成功", 5*time.Minute).Err(); scanqr_err != nil {
+			if scanqr_err := redisCli.Set(timeoutCtx, userID, "扫码登录成功", 5*time.Minute).Err(); scanqr_err != nil {
 				logs.CtxErrorf(timeoutCtx, "保存登录成功状态失败: %v", scanqr_err)
 			}
 			//把cookies放在redis里面,有效期24小时
@@ -674,7 +674,7 @@ func (p *PublishThirdApplicationService) XhsLogin(ctx context.Context, req *publ
 			cookies, _ := page.Cookies([]string{})
 			data, _ := json.Marshal(cookies)
 			//os.WriteFile(cookieFile, data, 0644)
-			cookie_key := "Cookies" + key
+			cookie_key := "Cookies" + userID
 			if cookies_err := redisCli.Set(timeoutCtx, cookie_key, data, 24*time.Hour).Err(); cookies_err != nil {
 				logs.CtxErrorf(timeoutCtx, "保存cookies失败: %v", cookies_err)
 			} else {
@@ -682,7 +682,7 @@ func (p *PublishThirdApplicationService) XhsLogin(ctx context.Context, req *publ
 			}
 		} else {
 			logs.CtxWarnf(timeoutCtx, "扫码登录超时")
-			if err := redisCli.Set(timeoutCtx, key, "扫码登录超时", 5*time.Minute).Err(); err != nil {
+			if err := redisCli.Set(timeoutCtx, userID, "扫码登录超时", 5*time.Minute).Err(); err != nil {
 				logs.CtxErrorf(timeoutCtx, "保存扫码超时状态失败: %v", err)
 			}
 		}
@@ -692,15 +692,15 @@ func (p *PublishThirdApplicationService) XhsLogin(ctx context.Context, req *publ
 }
 
 // 获取小红书二维码
-func (p *PublishThirdApplicationService) GetXhsLoginQr(ctx context.Context) (*publishThird.PublishThirdResponse[string], error) {
+func (p *PublishThirdApplicationService) GetXhsLoginQr(ctx context.Context, req *publishThird.GetThirdLoginRequest) (*publishThird.PublishThirdResponse[string], error) {
 	resp := publishThird.PublishThirdResponse[string]{
 		Code:    0,
 		Message: "ok",
 	}
-	userID := int64(123456789)
-	str := strconv.FormatInt(userID, 10)
+	userId := req.UserId
+
 	cmdable := redis.New()
-	val, redis_err := cmdable.Get(ctx, str).Result()
+	val, redis_err := cmdable.Get(ctx, userId).Result()
 	if redis_err != nil {
 		if redis_err.Error() == "redis: nil" {
 			resp.Message = "二维码已失效"
@@ -709,7 +709,7 @@ func (p *PublishThirdApplicationService) GetXhsLoginQr(ctx context.Context) (*pu
 	}
 	resp.Data = val
 	//获取之后删除
-	cmdable.Del(ctx, str)
+	cmdable.Del(ctx, userId)
 	return &resp, nil
 }
 
@@ -720,11 +720,11 @@ func (p *PublishThirdApplicationService) GetTweetInfo(ctx context.Context, req p
 		Message: "ok",
 	}
 	userID := req.UserId
-	if req.UserId == 0 {
-		userID = int64(123456789)
+	if req.UserId == "" {
+		return nil, errorx.New(errno.ErrUserAuthenticationFailed, errorx.KV("reason", "missing session_key in cookie"))
 	}
-	key := strconv.FormatInt(userID, 10)
-	manager, l := NewBrowserManager(ctx, key)
+
+	manager, l := NewBrowserManager(ctx, userID)
 	if !manager.isLogin {
 		resp.Code = 2
 		resp.Message = "error"

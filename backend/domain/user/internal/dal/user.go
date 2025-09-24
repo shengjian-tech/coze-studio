@@ -49,6 +49,18 @@ func (dao *UserDAO) GetUsersByEmail(ctx context.Context, email string) (*model.U
 
 	return user, true, err
 }
+func (dao *UserDAO) GetUsersByMobile(ctx context.Context, mobile string) (*model.User, bool, error) {
+	user, err := dao.query.User.WithContext(ctx).Where(dao.query.User.Mobile.Eq(mobile)).First()
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, false, nil
+	}
+
+	if err != nil {
+		return nil, false, err
+	}
+
+	return user, true, err
+}
 
 func (dao *UserDAO) UpdateSessionKey(ctx context.Context, userID int64, sessionKey string) error {
 	_, err := dao.query.User.WithContext(ctx).Where(
@@ -132,6 +144,19 @@ func (dao *UserDAO) CheckEmailExist(ctx context.Context, email string) (bool, er
 	}
 
 	return true, nil
+}
+func (dao *UserDAO) CheckMobileExist(ctx context.Context, mobile string) (bool, error) {
+	_, exist, err := dao.GetUsersByMobile(ctx, mobile)
+	if !exist {
+		return false, nil
+	}
+
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+
 }
 
 // CreateUser Create a new user
