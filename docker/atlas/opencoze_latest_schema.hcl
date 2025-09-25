@@ -4673,7 +4673,7 @@ table "publish_third_url" {
   }
 
   column "creator_id" {
-    type    = "bigint"
+    type    = "varchar(50)"
     null    = false
     comment = "creator_id用户id"
   }
