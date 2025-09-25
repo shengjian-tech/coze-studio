@@ -45,7 +45,7 @@ type GetThirdLoginRequest struct {
 
 type GetThirdUrlRequest struct {
 	ThirdUrlType *publishThird_commion.LoginType `thrift:"LoginType,1,required" json:"LoginType,omitempty"`
-	UserId       *int64                          `thrift:"UserId,2,optional" json:"UserId,omitempty"`
+	UserId       *string                         `thrift:"UserId,2,optional" json:"UserId,omitempty"`
 	UrlType      *int32                          `thrift:"UrlType,3,required" json:"UrlType,omitempty"`
 	Status       *int32                          `thrift:"Status,4,required" json:"Status,omitempty"`
 	Introduction *string                         `thrift:"Introduction,5,optional" json:"Introduction,omitempty"`
@@ -114,7 +114,7 @@ type PublishThirdUrl struct {
 	UpdatedAt    int64
 	Status       int32
 	UrlType      int32
-	CreatorID    int64
+	CreatorID    string
 	LikeCount    int64
 	CollectCount int64
 	ChatCount    int64

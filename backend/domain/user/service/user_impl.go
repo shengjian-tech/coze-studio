@@ -686,9 +686,8 @@ func (u *userImpl) FeishuLogin(ctx context.Context, code string) (user *userEnti
 	//user_access_token放入缓存
 	u.Cache.Set(ctx, RFeiShuUserAccessToken+userOpenId, token.AccessToken, 110*time.Minute) //user_access_token,过期时间1小时50分钟后
 	u.Cache.Set(ctx, RFeiShuUserRefreshToken+userOpenId, token.RefreshToken, 720*time.Hour) //过期时间30天
-	openid, _ := strconv.ParseInt(userOpenId, 10, 64)
 	return &userEntity.User{
-		UserID: openid,
+		Name: userOpenId,
 	}, nil
 	//查看该用户是否存在不存在则注册
 

@@ -18,7 +18,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"github.com/coze-dev/coze-studio/backend/domain/publishThird/entity"
 	"github.com/coze-dev/coze-studio/backend/domain/publishThird/internal/dal/model"
 	"github.com/coze-dev/coze-studio/backend/domain/publishThird/repository"
@@ -28,7 +27,6 @@ import (
 	"github.com/coze-dev/coze-studio/backend/pkg/errorx"
 	"github.com/coze-dev/coze-studio/backend/types/errno"
 	"gorm.io/gorm"
-	"strconv"
 	"time"
 )
 
@@ -61,12 +59,11 @@ func (p *publishThirdSVC) SaveTweetUrl(ctx context.Context, request *ThirdReques
 	if ID_err != nil {
 		return nil, errorx.New(500)
 	}
-	userid_int, _ := toInt64(*request.UserId)
 
 	if err = p.publishThirdRepo.Create(ctx, &model.PublishThirdUrl{
 		ID:           ID,
 		Introduction: *request.Introduction,
-		CreatorID:    userid_int,
+		CreatorID:    *request.UserId,
 		Url:          *request.Url,
 		UrlType:      1,
 		CreatedAt:    now,
@@ -89,10 +86,10 @@ func (p *publishThirdSVC) GetTweetUrlList(ctx context.Context, request *ThirdReq
 	if request.UserId == nil {
 		return nil, errorx.New(500, errorx.KV("msg", "用户id不能为空"))
 	}
-	userid_int, _ := toInt64(*request.UserId)
+
 	opts := &entity.WherePublishThirdUrlOption{
 		Status:       request.Status,
-		UserID:       &userid_int,
+		UserID:       request.UserId,
 		Introduction: request.Introduction,
 		Page:         request.Page,
 		PageSize:     request.PageSize,
@@ -188,24 +185,4 @@ func (p *publishThirdSVC) UpdateTweetUrl(ctx context.Context, request *ThirdUrlR
 		Msg:  "ok",
 		Code: 0,
 	}, nil
-}
-
-// 断言并转换为int64
-func toInt64(v interface{}) (int64, error) {
-	switch val := v.(type) {
-	case string:
-		return strconv.ParseInt(val, 10, 64)
-	case int64:
-		return val, nil
-	case int:
-		return int64(val), nil
-	case int32:
-		return int64(val), nil
-	case float64:
-		return int64(val), nil
-	case float32:
-		return int64(val), nil
-	default:
-		return 0, fmt.Errorf("cannot convert %T to int64", v)
-	}
 }

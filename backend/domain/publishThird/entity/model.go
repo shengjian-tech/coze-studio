@@ -27,7 +27,7 @@ type WherePublishThirdUrlOption struct {
 	url          *string
 	Introduction *string // Exact match
 	Status       *int32
-	UserID       *int64
+	UserID       *string
 	Query        *string // fuzzy match
 	Page         *int
 	PageSize     *int

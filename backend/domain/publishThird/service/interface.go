@@ -47,7 +47,7 @@ type ThirdResponse struct {
 }
 
 type ThirdRequest struct {
-	UserId       *int64
+	UserId       *string
 	UrlType      *int32
 	Status       *int32
 	Introduction *string

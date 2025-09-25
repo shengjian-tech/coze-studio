@@ -440,6 +440,7 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 
 		request := service.ThirdRequest{}
 		request.Introduction = &detailTitle
+		request.UserId = &userID
 		request.Url = &detailURL
 		_, response_err := p.DomainSVC.SaveTweetUrl(ctx, &request)
 		if response_err != nil {
@@ -516,7 +517,7 @@ func (p *PublishThirdApplicationService) SaveTweetUrl(ctx context.Context, req *
 		Message: "ok",
 	}
 	request := service.ThirdRequest{}
-	var userID int64
+	var userID string
 	if req.UserId != nil {
 		userID = *req.UserId
 	} else {
@@ -547,7 +548,7 @@ func (p *PublishThirdApplicationService) GetTweetUrlList(ctx context.Context, re
 		Message: "ok",
 	}
 	request := service.ThirdRequest{}
-	var userID int64
+	var userID string
 	if req.UserId != nil {
 		userID = *req.UserId
 	} else {
