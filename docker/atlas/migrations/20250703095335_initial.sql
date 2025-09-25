@@ -88,3 +88,18 @@ CREATE TABLE `opencoze`.`workflow_reference` (`id` bigint unsigned NOT NULL COMM
 CREATE TABLE `opencoze`.`workflow_snapshot` (`workflow_id` bigint unsigned NOT NULL COMMENT "workflow id this snapshot belongs to", `commit_id` varchar(255) NOT NULL COMMENT "the commit id of the workflow draft", `canvas` mediumtext NOT NULL COMMENT "frontend schema for this snapshot", `input_params` mediumtext NULL COMMENT "input parameter info", `output_params` mediumtext NULL COMMENT "output parameter info", `created_at` bigint unsigned NOT NULL, PRIMARY KEY (`workflow_id`, `commit_id`)) CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT "snapshot for executed workflow draft";
 -- Create "workflow_version" table
 CREATE TABLE `opencoze`.`workflow_version` (`id` bigint unsigned NOT NULL COMMENT "workflow id", `version` varchar(50) NOT NULL COMMENT "发布版本", `version_description` varchar(2000) NOT NULL COMMENT "版本描述", `canvas` mediumtext NOT NULL COMMENT "前端 schema", `input_params` mediumtext NULL, `output_params` mediumtext NULL, `creator_id` bigint unsigned NOT NULL COMMENT "发布用户 ID", `created_at` bigint unsigned NOT NULL COMMENT "创建时间毫秒时间戳", `deleted_at` datetime(3) NULL COMMENT "删除毫秒时间戳", `commit_id` varchar(255) NOT NULL COMMENT "the commit id corresponding to this version", PRIMARY KEY (`id`, `version`), INDEX `idx_id_created_at` (`id`, `created_at`)) CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci;
+---Create "publish_third_url" table
+CREATE TABLE `publish_third_url`  (
+  `id` bigint(0) NOT NULL AUTO_INCREMENT COMMENT 'id',
+  `introduction` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '链接介绍',
+  `url` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT 'url',
+  `created_at` bigint(0) NOT NULL COMMENT 'Create Time in Milliseconds',
+  `updated_at` bigint(0) NOT NULL COMMENT 'Update Time in Milliseconds',
+  `status` int(0) NOT NULL DEFAULT 1 COMMENT '0 删除, 1 正常',
+  `urlType` int(0) NOT NULL DEFAULT 1 COMMENT '1 小红书',
+  `creator_id` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'creator_id用户id',
+  `likeCount` bigint(0) NULL DEFAULT NULL COMMENT '点赞量',
+  `collectCount` bigint(0) NULL DEFAULT NULL COMMENT '收藏量',
+  `chatCount` bigint(0) NULL DEFAULT NULL COMMENT '评论量',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 7550963274724933633 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ;
