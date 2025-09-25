@@ -12,6 +12,8 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - content
               properties:
                 content:
                   type: string
@@ -29,18 +31,21 @@ paths:
                     type: string
                     description: 错误信息
                   data:
-                    properties:
-                      word:
-                        type: string
-                        description: 敏感词
-                      check_type:
-                        type: string
-                        description: 敏感词类型
                     type: array
+                    nullable: true   # 允许返回 null
+                    items:
+                      type: object
+                      properties:
+                        word:
+                          type: string
+                          description: 敏感词
+                        check_type:
+                          type: string
+                          description: 敏感词类型
                 type: object
           description: new desc
         default:
           description: ""
-      summary: 根据用户输入内容检测文段中是否有平台禁止出现的敏感词或者如涉黄、暴力、政治敏感等违禁词，如果有则返回敏感词，敏感词类型的数组，没有则为null
+      summary: 根据用户输入内容检测文段中是否有平台禁止出现的敏感词或者如涉黄、暴力、政治敏感等违禁词，如果有则返回敏感词，敏感词类型的数组，没有敏感词则为空
 servers:
   - url: http://127.0.0.1:8888
