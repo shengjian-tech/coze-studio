@@ -935,7 +935,7 @@
       deprecated: false
       method: post
       sub_url: /vp/textToImage
-- plugin_id: 25
+- plugin_id: 100
   product_id: 7328314516272463926
   deprecated: false
   version: v1.0.0
