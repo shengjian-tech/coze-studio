@@ -98,6 +98,7 @@ func SaveTweetUrls(ctx context.Context, c *app.RequestContext) {
 }
 
 // 发布之后的url
+// api/publishThird/get_tweet_url
 func GetTweetUrls(ctx context.Context, c *app.RequestContext) {
 	var err error
 	var req publishThird.GetThirdUrlRequest

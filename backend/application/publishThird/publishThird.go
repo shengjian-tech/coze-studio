@@ -244,6 +244,11 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 	}
 
 	Manager, l := NewBrowserManager(ctx, userID)
+	defer func() {
+		if l != nil {
+			l.Kill()
+		}
+	}()
 
 	resp := publishThird.PublishThirdResponse[string]{
 		Code:    0,
@@ -264,14 +269,17 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 		time.Sleep(1 * time.Second)
 		action, err := NewPublishImageAction(page)
 		if err != nil {
-			slog.Error("创建发布动作失败", "error", err)
+			fmt.Printf("cuowu :---,%v", err)
+			logs.CtxErrorf(ctx, "发布失败：----%v", err)
+			l.Kill()
 			return &Response{
-				Code: 500,
+				Code: 503,
 				Msg:  "创建发布动作失败: " + err.Error(),
 			}
 		}
 		if len(req.Title) == 0 && len(req.Content) == 0 {
 			slog.Error("标题或内容为空", "error", err)
+			l.Kill()
 			return &Response{
 				Code: 500,
 				Msg:  "标题或内容不能为空: " + err.Error(),
@@ -315,6 +323,7 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 		}
 		if _, err := action.PublishArticle(ctx, &content); err != nil {
 			slog.Error("发布失败", "error", err)
+			l.Kill()
 			return &Response{
 				Code: 500,
 				Msg:  "发布失败: " + err.Error(),
@@ -331,6 +340,7 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 		shouye_err := page.Navigate("https://www.xiaohongshu.com/")
 		if shouye_err != nil {
 			slog.Error("跳转首页失败", "err", err)
+			l.Kill()
 			return &Response{
 				Code: 501,
 				Msg:  "跳转首页失败: " + shouye_err.Error(),
@@ -358,6 +368,7 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 
 		if myTab == nil {
 			slog.Info("未找到「我的」tab")
+			l.Kill()
 			return &Response{
 				Code: 501,
 				Msg:  "未找到「我」tab",
@@ -373,7 +384,7 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 		// 等待列表渲染第一篇推文
 		// 定位第一篇笔记，设置超时时间避免无限等待
 		slog.Info("开始查找第一篇笔记...")
-		note, err := page.Timeout(10 * time.Minute).Element("section.note-item[data-index='0']")
+		note, err := page.Timeout(5 * time.Minute).Element("section.note-item[data-index='0']")
 		if err != nil {
 			slog.Error("查找第一篇笔记超时", "error", err)
 			// 尝试其他选择器
@@ -389,6 +400,7 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 
 		if note == nil {
 			slog.Info("未找到第一篇笔记")
+			l.Kill()
 			return &Response{
 				Code: 501,
 				Msg:  "未找到第一篇笔记",
@@ -475,6 +487,11 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 		resp.Code = 1
 		resp.Message = "error"
 		resp.Data = "数据保存到数据库失败"
+		return &resp, nil
+	} else if res.Code == 503 {
+		resp.Code = 1
+		resp.Message = "error"
+		resp.Data = "跳转发布页面失败或今日发布已达到上限"
 		return &resp, nil
 	} else {
 		resp.Code = 1
@@ -968,10 +985,18 @@ type PublishAction struct {
 const urlOfPublic = `https://creator.xiaohongshu.com/publish/publish?source=official`
 
 // NewPublishImageAction 创建发布动作
-func NewPublishImageAction(page *rod.Page) (*PublishAction, error) {
+func NewPublishImageAction(page *rod.Page) (action *PublishAction, err error) {
 	pp := page.Timeout(60 * time.Second)
 	pp.MustNavigate(urlOfPublic)
+	defer func() {
+		if r := recover(); r != nil {
+			// 你可以在这里做更复杂的解析，比如根据 r 判断是不是 "element not found" 等
+			err = fmt.Errorf("panic captured: %v", r)
+		}
+	}()
+
 	pp.MustElement(`div.upload-content`).MustWaitVisible()
+
 	slog.Info("wait for upload-content visible success")
 
 	// 等待一段时间确保页面完全加载
