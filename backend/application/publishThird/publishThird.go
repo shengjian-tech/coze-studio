@@ -311,6 +311,7 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 				savePath := saveDir + filename
 				image, local_image_err := downloadImage(path_, savePath)
 				if local_image_err != nil {
+					l.Kill()
 					return &Response{
 						Code: 500,
 						Msg:  "本地保存失败: " + local_image_err.Error(),
@@ -390,6 +391,7 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 			// 尝试其他选择器
 			note, err = page.Timeout(5 * time.Second).Element("section.note-item")
 			if err != nil {
+				l.Kill()
 				slog.Error("使用备用选择器也未找到笔记", "error", err)
 				return &Response{
 					Code: 501,
@@ -411,6 +413,7 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 
 		if err != nil || cover == nil {
 			slog.Info("未找到笔记封面链接", "error", err)
+			l.Kill()
 			return &Response{
 				Code: 501,
 				Msg:  "未找到笔记封面链接",
@@ -420,6 +423,7 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 
 		if href_error != nil {
 			slog.Info("获取笔记链接失败", "err", href_error)
+			l.Kill()
 			return &Response{
 				Code: 501,
 				Msg:  "获取笔记链接失败: " + href_error.Error(),
@@ -432,6 +436,7 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 
 		if title_error != nil {
 			slog.Info("未找到笔记标题")
+			l.Kill()
 			return &Response{
 				Code: 501,
 				Msg:  "未找到笔记标题: " + title_error.Error(),
@@ -441,6 +446,7 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 
 		if detailTitle == "" {
 			slog.Info("获取笔记标题失败")
+			l.Kill()
 			return &Response{
 				Code: 501,
 				Msg:  "获取笔记标题失败",
@@ -456,6 +462,7 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 		request.Url = &detailURL
 		_, response_err := p.DomainSVC.SaveTweetUrl(ctx, &request)
 		if response_err != nil {
+			l.Kill()
 			return &Response{
 				Code: 502,
 				Msg:  "保存到数据库失败: " + response_err.Error(),
