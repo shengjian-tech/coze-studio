@@ -180,7 +180,7 @@ func GetXhsLoginQr(ctx context.Context, c *app.RequestContext) {
 }
 
 // PublishToXHS .
-// @router /api/publish_to_third/publish_to_xhs [POST]
+// @router /api/publish_to_third/publish_xhs_tweet [POST]
 func PublishToXHS(ctx context.Context, c *app.RequestContext) {
 	var err error
 	var req publishThird.GetXHSRequest

@@ -39,6 +39,8 @@ import (
 	"io"
 	"log"
 	"log/slog"
+	"math"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
@@ -325,6 +327,13 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 		if _, err := action.PublishArticle(ctx, &content); err != nil {
 			slog.Error("发布失败", "error", err)
 			l.Kill()
+			if err.Error() == "因违反社区规范禁止发笔记" {
+				return &Response{
+					Code: 504,
+					Msg:  err.Error(),
+				}
+			}
+
 			return &Response{
 				Code: 500,
 				Msg:  "发布失败: " + err.Error(),
@@ -362,7 +371,58 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 
 		//加载cookies
 		loadCookies(ctx, page, userID)
+		//检测是否被风控，如果被风控了就模拟用户滑动滑块
 
+		element, err := page.Timeout(2 * time.Second).ElementX("//div[@class='red-captcha-title']")
+
+		if err == nil && element != nil {
+			text, err := element.Text()
+
+			if err != nil {
+				l.Kill()
+				logs.CtxErrorf(ctx, "获取风控元素失败：%v", err)
+				return &Response{
+					Code: 501,
+					Msg:  "未找到第一篇笔记: " + err.Error(),
+				}
+			}
+			//被风控了
+			if text == "Security Verification" {
+				//由于很难触发人机检测，这块功能写完了还没有测，目前暂时先直接返回让用户手动发送
+				return &Response{
+					Code: 505,
+					Msg:  "触发人机检测，请用户前往小红书手动发布",
+				}
+				//sliderElement := page.MustElement("//div[@class='red-captcha-slider']")
+				//// 2. 获取滑块轨道元素
+				//track := page.MustElementX("//div[@class='red-captcha-slider-path']")
+				//if track == nil {
+				//	l.Kill()
+				//	return &Response{
+				//		Code: 5001,
+				//		Msg:  "获取风控元素失败: " + err.Error(),
+				//	}
+				//}
+				//
+				//// 3. 获取元素位置和尺寸
+				//sliderBox := sliderElement.MustShape().Box()
+				//trackBox := track.MustShape().Box()
+				////滑块的起始位置
+				//startX := sliderBox.X + sliderBox.Width/2
+				//startY := sliderBox.Y + sliderBox.Height/2
+				//
+				//// 4. 计算拖拽距离（留一点余量，不要拖到最边）
+				//dragDistance := trackBox.Width - sliderBox.Width - 10 // 留10px余量
+				//endX := startX + dragDistance
+				//endY := startY
+				//
+				//fmt.Printf("开始位置: (%.2f, %.2f)\n", startX, startY)
+				//fmt.Printf("结束位置: (%.2f, %.2f)\n", endX, endY)
+				//fmt.Printf("拖拽距离: %.2f px\n", dragDistance)
+				////开始拖拽
+
+			}
+		}
 		// 找到「我的」tab 并点击
 		//page.MustElement("li.user.side-bar-component span.channel").MustClick()
 		myTab := page.MustElement("li.user.side-bar-component span.channel")
@@ -495,10 +555,19 @@ func (p *PublishThirdApplicationService) PublishNote(ctx context.Context, req pu
 		resp.Message = "error"
 		resp.Data = "数据保存到数据库失败"
 		return &resp, nil
+	} else if res.Code == 504 {
+		resp.Code = 504
+		resp.Message = "因违反社区规范禁止发笔记,账号状态异常"
+
+		return &resp, nil
 	} else if res.Code == 503 {
 		resp.Code = 1
 		resp.Message = "error"
 		resp.Data = "跳转发布页面失败或今日发布已达到上限"
+		return &resp, nil
+	} else if res.Code == 505 {
+		resp.Code = 505
+		resp.Message = "触发人机检测请前往小红书手动发布"
 		return &resp, nil
 	} else {
 		resp.Code = 1
@@ -1008,6 +1077,25 @@ func NewPublishImageAction(page *rod.Page) (action *PublishAction, err error) {
 
 	// 等待一段时间确保页面完全加载
 	time.Sleep(1 * time.Second)
+	noteEl, err := page.Timeout(3 * time.Second).ElementX("//div[@class='short-note-tooltip']")
+	if err == nil && noteEl != nil {
+		//提示存在
+		// 查找 title
+		textTitle, err := noteEl.ElementX(".//span[@class='short-note-tooltip-text-title']")
+		if err != nil || textTitle == nil {
+			return
+		}
+
+		// 获取文本
+		text, _ := textTitle.Text()
+		if text == "试试文字配图吧" {
+			// 查找按钮并点击
+			button, err := noteEl.ElementX(".//button")
+			if err == nil && button != nil {
+				button.MustClick()
+			}
+		}
+	}
 
 	createElems := pp.MustElements("div.creator-tab")
 	slog.Info("found creator-tab elements", "count", len(createElems))
@@ -1046,9 +1134,8 @@ func (p *PublishAction) PublishArticle(ctx context.Context, content *entity.Publ
 	}
 
 	if err := submitPublish(page, content.Title, content.Content); err != nil {
-		return "", errors.Wrap(err, "小红书发布失败")
+		return "", err
 	}
-
 	return "", nil
 }
 
@@ -1061,7 +1148,7 @@ func uploadImages(page *rod.Page, imagesPaths []string) error {
 	pp := page.Timeout(30 * time.Second)
 	uploadInput := pp.MustElement(".upload-input")
 	uploadInput.MustSetFiles(imagesPaths...)
-	time.Sleep(3 * time.Second)
+	time.Sleep(5 * time.Second)
 	return nil
 }
 
@@ -1081,6 +1168,13 @@ func submitPublish(page *rod.Page, title, content string) error {
 
 	submitButton := page.MustElement("div.submit div.d-button-content")
 	submitButton.MustClick()
+	//time.Sleep(800 * time.Millisecond)
+	//检测是否发布今日上限或者账号违规了
+	text, err := WaitToastText(page, 3*time.Second)
+	if err == nil && text != "" {
+		fmt.Sprintf("是否获取到了文本：-----%s\n", text)
+		return fmt.Errorf(text)
+	}
 	time.Sleep(3 * time.Second)
 
 	return nil
@@ -1169,4 +1263,111 @@ func findTextboxParent(elem *rod.Element) *rod.Element {
 		currentElem = parent
 	}
 	return nil
+}
+
+// humanLikeDrag 模拟人类拖拽行为
+func humanLikeDrag(page *rod.Page, startX, startY, endX, endY float64) error {
+	// 1. 鼠标移动到滑块上
+	page.Mouse.MustMoveTo(startX, startY)
+	time.Sleep(time.Duration(rand.Intn(500)+200) * time.Millisecond)
+
+	// 2. 按下鼠标
+	page.Mouse.MustDown(proto.InputMouseButtonLeft)
+	time.Sleep(time.Duration(rand.Intn(100)+50) * time.Millisecond)
+
+	// 3. 计算拖拽路径（贝塞尔曲线模拟）
+	steps := calculateDragSteps(startX, startY, endX, endY, 30)
+
+	// 4. 执行拖拽步骤
+	for i, step := range steps {
+		page.Mouse.MustMoveTo(step.X, step.Y)
+
+		// 添加随机延迟，模拟人类不稳定的速度
+		delay := calculateStepDelay(i, len(steps))
+		time.Sleep(delay)
+	}
+
+	// 5. 释放鼠标
+	page.Mouse.MustUp(proto.InputMouseButtonLeft)
+
+	// 6. 等待验证结果
+	time.Sleep(1 * time.Second)
+
+	return nil
+}
+
+// DragStep 拖拽步骤
+type DragStep struct {
+	X, Y float64
+}
+
+// calculateDragSteps 计算拖拽步骤（使用贝塞尔曲线）
+func calculateDragSteps(startX, startY, endX, endY float64, stepCount int) []DragStep {
+	steps := make([]DragStep, stepCount)
+
+	// 添加一些随机性，模拟人类不完全直线的拖拽
+	midX := (startX + endX) / 2
+	midY := (startY + endY) / 2
+
+	// 随机偏移中点，创建轻微的弧形
+	offsetY := (rand.Float64() - 0.5) * 20 // 上下最多偏移20px
+	midY += offsetY
+
+	for i := 0; i < stepCount; i++ {
+		t := float64(i) / float64(stepCount-1)
+
+		// 使用二次贝塞尔曲线
+		x := math.Pow(1-t, 2)*startX + 2*(1-t)*t*midX + math.Pow(t, 2)*endX
+		y := math.Pow(1-t, 2)*startY + 2*(1-t)*t*midY + math.Pow(t, 2)*endY
+
+		// 添加微小的随机抖动
+		x += (rand.Float64() - 0.5) * 2
+		y += (rand.Float64() - 0.5) * 2
+
+		steps[i] = DragStep{X: x, Y: y}
+	}
+
+	return steps
+}
+
+// calculateStepDelay 计算每步的延迟（模拟人类变速）
+func calculateStepDelay(stepIndex, totalSteps int) time.Duration {
+	// 开始快，中间慢，结束稍快
+	progress := float64(stepIndex) / float64(totalSteps)
+
+	var baseDelay time.Duration
+	switch {
+	case progress < 0.3: // 开始阶段
+		baseDelay = 30 * time.Millisecond
+	case progress < 0.7: // 中间阶段（更慢，模拟精确定位）
+		baseDelay = 60 * time.Millisecond
+	default: // 结束阶段
+		baseDelay = 40 * time.Millisecond
+	}
+
+	// 添加随机变化
+	randomDelay := time.Duration(rand.Intn(20)) * time.Millisecond
+	return baseDelay + randomDelay
+}
+
+func WaitToastText(page *rod.Page, timeout time.Duration) (string, error) {
+	// 1. 等待 toast 元素出现
+	el, err := page.Timeout(timeout).ElementX(
+		"//div[contains(@class,'creator-publish-toast') and contains(@class,'error')]",
+	)
+	if err != nil {
+		return "", fmt.Errorf("toast not found within %v: %w", timeout, err)
+	}
+
+	// 2. 在元素消失前不断尝试取文本
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		text, err := el.Text()
+		if err == nil && strings.TrimSpace(text) != "" {
+			return text, nil // 成功抓到内容
+		}
+		time.Sleep(100 * time.Millisecond) // 稍微等一下再尝试
+	}
+
+	return "", fmt.Errorf("toast appeared but no text found within %v", timeout)
 }
