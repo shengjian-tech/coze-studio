@@ -1081,10 +1081,7 @@ func NewPublishImageAction(page *rod.Page) (action *PublishAction, err error) {
 	if err == nil && noteEl != nil {
 		//提示存在
 		// 查找 title
-		textTitle, err := noteEl.ElementX(".//span[@class='short-note-tooltip-text-title']")
-		if err != nil || textTitle == nil {
-			return
-		}
+		textTitle, _ := noteEl.ElementX(".//span[@class='short-note-tooltip-text-title']")
 
 		// 获取文本
 		text, _ := textTitle.Text()
